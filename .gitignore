@@ -10,11 +10,6 @@ out/
 backend/target/
 backend/*.log
 
-# Maven wrapper (optionnel)
-backend/.mvn/
-backend/mvnw
-backend/mvnw.cmd
-
 # Logs
 *.log
 
