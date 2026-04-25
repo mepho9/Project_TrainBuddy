@@ -1,0 +1,34 @@
+# IntelliJ
+.idea/
+*.iml
+out/
+
+# VS Code
+.vscode/
+
+# Java / Spring Boot
+backend/target/
+backend/*.log
+
+# Maven wrapper (optionnel)
+backend/.mvn/
+backend/mvnw
+backend/mvnw.cmd
+
+# Logs
+*.log
+
+# React / Node
+frontend/node_modules/
+frontend/dist/
+frontend/build/
+
+# Env files
+.env
+.env.*
+frontend/.env
+backend/.env
+
+# OS
+.DS_Store
+Thumbs.db
