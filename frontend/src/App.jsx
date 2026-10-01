@@ -24,7 +24,11 @@ function App() {
     localStorage.removeItem("token");
     localStorage.removeItem("email");
     localStorage.removeItem("role");
+
+    // Nettoyage d'anciennes versions de TrainBuddy
     localStorage.removeItem("participantIds");
+    localStorage.removeItem("participantId");
+    localStorage.removeItem("joinedSessionId");
 
     setIsAuthenticated(false);
     setAuthMode("login");
@@ -34,12 +38,16 @@ function App() {
     return authMode === "login" ? (
       <LoginPage
         onLoginSuccess={handleAuthSuccess}
-        onGoToRegister={() => setAuthMode("register")}
+        onGoToRegister={() =>
+          setAuthMode("register")
+        }
       />
     ) : (
       <RegisterPage
         onRegisterSuccess={handleAuthSuccess}
-        onGoToLogin={() => setAuthMode("login")}
+        onGoToLogin={() =>
+          setAuthMode("login")
+        }
       />
     );
   }
@@ -50,9 +58,19 @@ function App() {
       onChangePage={setActivePage}
       onLogout={handleLogout}
     >
-      {activePage === "sessions" && <SessionsPage />}
-      {activePage === "gyms" && <GymsPage />}
-      {activePage === "profile" && <ProfilePage onLogout={handleLogout} />}
+      {activePage === "sessions" && (
+        <SessionsPage />
+      )}
+
+      {activePage === "gyms" && (
+        <GymsPage />
+      )}
+
+      {activePage === "profile" && (
+        <ProfilePage
+          onLogout={handleLogout}
+        />
+      )}
     </AppShell>
   );
 }

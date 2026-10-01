@@ -32,6 +32,8 @@ public class SecurityConfig {
                         session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
                 )
                 .authorizeHttpRequests(auth -> auth
+                        .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+
                         .requestMatchers(
                                 "/swagger-ui/**",
                                 "/swagger-ui.html",
@@ -41,12 +43,12 @@ public class SecurityConfig {
 
                         .requestMatchers("/api/v1/auth/**").permitAll()
 
+                        // Routes sensibles : authentification membre obligatoire
                         .requestMatchers(HttpMethod.GET,
-                                "/api/v1/gyms",
-                                "/api/v1/gyms/**",
-                                "/api/v1/sessions",
-                                "/api/v1/sessions/**"
-                        ).permitAll()
+                                "/api/v1/sessions/*/participants",
+                                "/api/v1/sessions/*/messages",
+                                "/api/v1/sessions/*/membership"
+                        ).hasRole("MEMBER")
 
                         .requestMatchers(HttpMethod.POST,
                                 "/api/v1/sessions",
@@ -55,15 +57,21 @@ public class SecurityConfig {
                                 "/api/v1/gyms"
                         ).hasRole("MEMBER")
 
+                        // Consultation publique
                         .requestMatchers(HttpMethod.GET,
-                                "/api/v1/sessions/*/participants",
-                                "/api/v1/sessions/*/messages"
-                        ).hasRole("MEMBER")
+                                "/api/v1/gyms",
+                                "/api/v1/gyms/**",
+                                "/api/v1/sessions",
+                                "/api/v1/sessions/*"
+                        ).permitAll()
 
                         .anyRequest().authenticated()
                 )
                 .headers(headers -> headers.frameOptions(frame -> frame.disable()))
-                .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
+                .addFilterBefore(
+                        jwtAuthenticationFilter,
+                        UsernamePasswordAuthenticationFilter.class
+                );
 
         return http.build();
     }
@@ -77,12 +85,23 @@ public class SecurityConfig {
                 "https://project-train-buddy.vercel.app"
         ));
 
-        configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
-        configuration.setAllowedHeaders(List.of("Authorization", "Content-Type", "Accept"));
-        configuration.setExposedHeaders(List.of("Authorization"));
+        configuration.setAllowedMethods(
+                List.of("GET", "POST", "PUT", "DELETE", "OPTIONS")
+        );
+
+        configuration.setAllowedHeaders(
+                List.of("Authorization", "Content-Type", "Accept")
+        );
+
+        configuration.setExposedHeaders(
+                List.of("Authorization")
+        );
+
         configuration.setAllowCredentials(true);
 
-        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        UrlBasedCorsConfigurationSource source =
+                new UrlBasedCorsConfigurationSource();
+
         source.registerCorsConfiguration("/**", configuration);
 
         return source;

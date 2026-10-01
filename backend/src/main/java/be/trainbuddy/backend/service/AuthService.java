@@ -22,30 +22,45 @@ public class AuthService {
     private final UserRepository userRepository;
     private final RoleRepository roleRepository;
     private final PasswordEncoder passwordEncoder;
-
     private final JwtService jwtService;
 
-    public AuthResponse register(RegisterRequest request) {
-        if (userRepository.existsByEmail(request.email())) {
-            throw new ConflictException("Cette adresse email est déjà utilisée");
+    public AuthResponse register(
+            RegisterRequest request
+    ) {
+        if (userRepository.existsByEmail(
+                request.email()
+        )) {
+            throw new ConflictException(
+                    "Cette adresse email est déjà utilisée"
+            );
         }
 
-        Role memberRole = roleRepository.findByName("MEMBER")
-                .orElseGet(() -> roleRepository.save(
-                        Role.builder()
-                                .name("MEMBER")
-                                .build()
-                ));
+        Role memberRole =
+                roleRepository
+                        .findByName("MEMBER")
+                        .orElseGet(() ->
+                                roleRepository.save(
+                                        Role.builder()
+                                                .name("MEMBER")
+                                                .build()
+                                )
+                        );
 
-        User user = User.builder()
-                .email(request.email())
-                .passwordHash(passwordEncoder.encode(request.password()))
-                .role(memberRole)
-                .banned(false)
-                .createdAt(LocalDateTime.now())
-                .build();
+        User user =
+                User.builder()
+                        .email(request.email())
+                        .passwordHash(
+                                passwordEncoder.encode(
+                                        request.password()
+                                )
+                        )
+                        .role(memberRole)
+                        .banned(false)
+                        .createdAt(LocalDateTime.now())
+                        .build();
 
-        User savedUser = userRepository.save(user);
+        User savedUser =
+                userRepository.save(user);
 
         return new AuthResponse(
                 savedUser.getId(),
@@ -55,19 +70,37 @@ public class AuthService {
         );
     }
 
-    public AuthResponse login(LoginRequest request) {
-        User user = userRepository.findByEmail(request.email())
-                .orElseThrow(() -> new RuntimeException("Identifiants invalides"));
+    public AuthResponse login(
+            LoginRequest request
+    ) {
+        User user =
+                userRepository
+                        .findByEmail(request.email())
+                        .orElseThrow(() ->
+                                new BadRequestException(
+                                        "Identifiants invalides"
+                                )
+                        );
 
         if (user.isBanned()) {
-            throw new BadRequestException("Ce compte est banni");
+            throw new BadRequestException(
+                    "Ce compte est banni"
+            );
         }
 
-        if (!passwordEncoder.matches(request.password(), user.getPasswordHash())) {
-            throw new BadRequestException("Identifiants invalides");
+        if (!passwordEncoder.matches(
+                request.password(),
+                user.getPasswordHash()
+        )) {
+            throw new BadRequestException(
+                    "Identifiants invalides"
+            );
         }
 
-        user.setLastLoginAt(LocalDateTime.now());
+        user.setLastLoginAt(
+                LocalDateTime.now()
+        );
+
         userRepository.save(user);
 
         return new AuthResponse(
@@ -77,4 +110,4 @@ public class AuthService {
                 jwtService.generateToken(user)
         );
     }
-}
+}   

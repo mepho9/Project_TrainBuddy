@@ -1,18 +1,49 @@
 package be.trainbuddy.backend.repository;
 
 import be.trainbuddy.backend.entity.SessionParticipant;
-import be.trainbuddy.backend.entity.TrainingSession;
-import be.trainbuddy.backend.entity.User;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
+import java.util.Collection;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
-public interface SessionParticipantRepository extends JpaRepository<SessionParticipant, UUID> {
+public interface SessionParticipantRepository
+        extends JpaRepository<SessionParticipant, UUID> {
 
-    boolean existsBySessionAndUser(TrainingSession session, User user);
+    boolean existsBySessionIdAndUserId(
+            UUID sessionId,
+            UUID userId
+    );
 
-    long countBySession(TrainingSession session);
+    Optional<SessionParticipant> findBySessionIdAndUserId(
+            UUID sessionId,
+            UUID userId
+    );
 
-    List<SessionParticipant> findBySession(TrainingSession session);
+    long countBySessionId(
+            UUID sessionId
+    );
+
+    List<SessionParticipant> findBySessionIdOrderByJoinedAtAsc(
+            UUID sessionId
+    );
+
+    boolean existsBySessionIdAndRecognitionCode(
+            UUID sessionId,
+            String recognitionCode
+    );
+
+    @Query("""
+            select sp.session.id, count(sp.id)
+            from SessionParticipant sp
+            where sp.session.id in :sessionIds
+            group by sp.session.id
+            """)
+    List<Object[]> countParticipantsBySessionIds(
+            @Param("sessionIds")
+            Collection<UUID> sessionIds
+    );
 }

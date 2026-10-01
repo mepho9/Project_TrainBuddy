@@ -39,6 +39,21 @@ public class GlobalExceptionHandler {
         );
     }
 
+    @ExceptionHandler(ForbiddenException.class)
+    @ResponseStatus(HttpStatus.FORBIDDEN)
+    public ApiErrorResponse handleForbidden(
+            ForbiddenException ex,
+            HttpServletRequest request
+    ) {
+        return new ApiErrorResponse(
+                java.time.LocalDateTime.now(),
+                403,
+                "Forbidden",
+                ex.getMessage(),
+                request.getRequestURI()
+        );
+    }
+
     @ExceptionHandler(ConflictException.class)
     @ResponseStatus(HttpStatus.CONFLICT)
     public ApiErrorResponse handleConflict(
@@ -64,7 +79,11 @@ public class GlobalExceptionHandler {
                 .getFieldErrors()
                 .stream()
                 .findFirst()
-                .map(error -> error.getField() + " : " + error.getDefaultMessage())
+                .map(error ->
+                        error.getField()
+                                + " : "
+                                + error.getDefaultMessage()
+                )
                 .orElse("Données invalides");
 
         return new ApiErrorResponse(

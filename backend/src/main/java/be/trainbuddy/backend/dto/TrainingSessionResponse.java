@@ -14,6 +14,9 @@ public record TrainingSessionResponse(
         String status,
         String visibility,
         UUID gymId,
-        String gymName
+        String gymName,
+        int participantCount,
+        int availablePlaces,
+        Double distanceKm
 ) {
 }
