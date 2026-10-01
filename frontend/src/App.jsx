@@ -1,52 +1,122 @@
 import { useState } from "react";
+
 import LoginPage from "./pages/LoginPage";
 import RegisterPage from "./pages/RegisterPage";
 import SessionsPage from "./pages/SessionsPage";
 import GymsPage from "./pages/GymsPage";
 import ProfilePage from "./pages/ProfilePage";
+import AdminPage from "./pages/AdminPage";
+
 import AppShell from "./components/AppShell";
+
 import "./App.css";
 
 function App() {
-  const [isAuthenticated, setIsAuthenticated] = useState(
-    Boolean(localStorage.getItem("token"))
-  );
+  const initialRole =
+    localStorage.getItem("role");
 
-  const [authMode, setAuthMode] = useState("login");
-  const [activePage, setActivePage] = useState("sessions");
+  const [isAuthenticated, setIsAuthenticated] =
+    useState(
+      Boolean(
+        localStorage.getItem("token")
+      )
+    );
+
+  const [role, setRole] =
+    useState(initialRole);
+
+  const [authMode, setAuthMode] =
+    useState("login");
+
+  const [activePage, setActivePage] =
+    useState(
+      initialRole === "ADMIN"
+        ? "admin"
+        : "sessions"
+    );
 
   const handleAuthSuccess = () => {
+    const authenticatedRole =
+      localStorage.getItem("role");
+
+    setRole(
+      authenticatedRole
+    );
+
     setIsAuthenticated(true);
-    setActivePage("sessions");
+
+    setActivePage(
+      authenticatedRole === "ADMIN"
+        ? "admin"
+        : "sessions"
+    );
   };
 
   const handleLogout = () => {
-    localStorage.removeItem("token");
-    localStorage.removeItem("email");
-    localStorage.removeItem("role");
+    localStorage.removeItem(
+      "token"
+    );
 
-    // Nettoyage d'anciennes versions de TrainBuddy
-    localStorage.removeItem("participantIds");
-    localStorage.removeItem("participantId");
-    localStorage.removeItem("joinedSessionId");
+    localStorage.removeItem(
+      "email"
+    );
 
-    setIsAuthenticated(false);
-    setAuthMode("login");
+    localStorage.removeItem(
+      "role"
+    );
+
+    /*
+     * Nettoyage de données provenant
+     * d'anciennes versions de TrainBuddy.
+     */
+    localStorage.removeItem(
+      "participantIds"
+    );
+
+    localStorage.removeItem(
+      "participantId"
+    );
+
+    localStorage.removeItem(
+      "joinedSessionId"
+    );
+
+    setRole(null);
+
+    setIsAuthenticated(
+      false
+    );
+
+    setAuthMode(
+      "login"
+    );
+
+    setActivePage(
+      "sessions"
+    );
   };
 
   if (!isAuthenticated) {
     return authMode === "login" ? (
       <LoginPage
-        onLoginSuccess={handleAuthSuccess}
+        onLoginSuccess={
+          handleAuthSuccess
+        }
         onGoToRegister={() =>
-          setAuthMode("register")
+          setAuthMode(
+            "register"
+          )
         }
       />
     ) : (
       <RegisterPage
-        onRegisterSuccess={handleAuthSuccess}
+        onRegisterSuccess={
+          handleAuthSuccess
+        }
         onGoToLogin={() =>
-          setAuthMode("login")
+          setAuthMode(
+            "login"
+          )
         }
       />
     );
@@ -54,23 +124,52 @@ function App() {
 
   return (
     <AppShell
-      activePage={activePage}
-      onChangePage={setActivePage}
-      onLogout={handleLogout}
+      activePage={
+        activePage
+      }
+      onChangePage={
+        setActivePage
+      }
+      onLogout={
+        handleLogout
+      }
+      role={
+        role
+      }
     >
-      {activePage === "sessions" && (
-        <SessionsPage />
+
+      {role === "ADMIN" && (
+        <>
+          {activePage ===
+            "admin" && (
+            <AdminPage />
+          )}
+        </>
       )}
 
-      {activePage === "gyms" && (
-        <GymsPage />
+      {role !== "ADMIN" && (
+        <>
+          {activePage ===
+            "sessions" && (
+            <SessionsPage />
+          )}
+
+          {activePage ===
+            "gyms" && (
+            <GymsPage />
+          )}
+
+          {activePage ===
+            "profile" && (
+            <ProfilePage
+              onLogout={
+                handleLogout
+              }
+            />
+          )}
+        </>
       )}
 
-      {activePage === "profile" && (
-        <ProfilePage
-          onLogout={handleLogout}
-        />
-      )}
     </AppShell>
   );
 }

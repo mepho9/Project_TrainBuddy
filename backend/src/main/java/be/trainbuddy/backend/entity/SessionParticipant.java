@@ -40,4 +40,17 @@ public class SessionParticipant {
 
     @Column(nullable = false)
     private boolean creator;
+
+    /*
+     * null = participation active.
+     *
+     * Une date signifie que le membre
+     * a quitté la session.
+     *
+     * Nous conservons la participation
+     * plutôt que de la supprimer afin de
+     * préserver l'historique du chat.
+     */
+    @Column(name = "left_at")
+    private LocalDateTime leftAt;
 }

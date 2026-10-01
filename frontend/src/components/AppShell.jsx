@@ -1,43 +1,122 @@
-export default function AppShell({ activePage, onChangePage, onLogout, children }) {
+export default function AppShell({
+  activePage,
+  onChangePage,
+  onLogout,
+  role,
+  children,
+}) {
+  const isAdmin =
+    role === "ADMIN";
+
   return (
     <div className="app-page">
+
       <header className="topbar">
+
         <div className="topbar-brand">
-          <div className="brand-icon small">🏋️</div>
+
+          <div className="brand-icon small">
+            🏋️
+          </div>
+
           <h1>
-            Train<span>Buddy</span>
+            Train
+            <span>
+              Buddy
+            </span>
           </h1>
+
         </div>
 
         <nav className="nav-tabs">
-          <button
-            className={activePage === "sessions" ? "active" : ""}
-            onClick={() => onChangePage("sessions")}
-          >
-            Sessions
-          </button>
 
-          <button
-            className={activePage === "gyms" ? "active" : ""}
-            onClick={() => onChangePage("gyms")}
-          >
-            Salles
-          </button>
+          {isAdmin ? (
 
-          <button
-            className={activePage === "profile" ? "active" : ""}
-            onClick={() => onChangePage("profile")}
-          >
-            Profil
-          </button>
+            <button
+              className={
+                activePage ===
+                "admin"
+                  ? "active"
+                  : ""
+              }
+              onClick={() =>
+                onChangePage(
+                  "admin"
+                )
+              }
+            >
+              Administration
+            </button>
+
+          ) : (
+
+            <>
+              <button
+                className={
+                  activePage ===
+                  "sessions"
+                    ? "active"
+                    : ""
+                }
+                onClick={() =>
+                  onChangePage(
+                    "sessions"
+                  )
+                }
+              >
+                Sessions
+              </button>
+
+              <button
+                className={
+                  activePage ===
+                  "gyms"
+                    ? "active"
+                    : ""
+                }
+                onClick={() =>
+                  onChangePage(
+                    "gyms"
+                  )
+                }
+              >
+                Salles
+              </button>
+
+              <button
+                className={
+                  activePage ===
+                  "profile"
+                    ? "active"
+                    : ""
+                }
+                onClick={() =>
+                  onChangePage(
+                    "profile"
+                  )
+                }
+              >
+                Profil
+              </button>
+            </>
+
+          )}
+
         </nav>
 
-        <button className="logout-btn" onClick={onLogout}>
+        <button
+          className="logout-btn"
+          onClick={
+            onLogout
+          }
+        >
           Déconnexion
         </button>
+
       </header>
 
       {children}
+
     </div>
   );
 }

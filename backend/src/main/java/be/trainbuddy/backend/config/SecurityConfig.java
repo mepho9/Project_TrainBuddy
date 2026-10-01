@@ -24,15 +24,33 @@ public class SecurityConfig {
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
 
     @Bean
-    public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+    public SecurityFilterChain filterChain(
+            HttpSecurity http
+    ) throws Exception {
+
         http
-                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
-                .csrf(csrf -> csrf.disable())
-                .sessionManagement(session ->
-                        session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
+                .cors(cors ->
+                        cors.configurationSource(
+                                corsConfigurationSource()
+                        )
                 )
+
+                .csrf(csrf ->
+                        csrf.disable()
+                )
+
+                .sessionManagement(session ->
+                        session.sessionCreationPolicy(
+                                SessionCreationPolicy.STATELESS
+                        )
+                )
+
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+
+                        .requestMatchers(
+                                HttpMethod.OPTIONS,
+                                "/**"
+                        ).permitAll()
 
                         .requestMatchers(
                                 "/swagger-ui/**",
@@ -41,33 +59,71 @@ public class SecurityConfig {
                                 "/h2-console/**"
                         ).permitAll()
 
-                        .requestMatchers("/api/v1/auth/**").permitAll()
+                        .requestMatchers(
+                                "/api/v1/auth/**"
+                        ).permitAll()
 
-                        // Routes sensibles : authentification membre obligatoire
-                        .requestMatchers(HttpMethod.GET,
+                        /*
+                         * Toute la zone d'administration
+                         * est strictement réservée au rôle ADMIN.
+                         */
+                        .requestMatchers(
+                                "/api/v1/admin/**"
+                        ).hasRole("ADMIN")
+
+                        /*
+                         * Routes réservées aux membres.
+                         */
+                        .requestMatchers(
+                                HttpMethod.GET,
+                                "/api/v1/sessions/my",
                                 "/api/v1/sessions/*/participants",
                                 "/api/v1/sessions/*/messages",
                                 "/api/v1/sessions/*/membership"
                         ).hasRole("MEMBER")
 
-                        .requestMatchers(HttpMethod.POST,
+                        .requestMatchers(
+                                HttpMethod.POST,
                                 "/api/v1/sessions",
                                 "/api/v1/sessions/*/join",
-                                "/api/v1/sessions/*/messages",
-                                "/api/v1/gyms"
+                                "/api/v1/sessions/*/messages"
                         ).hasRole("MEMBER")
 
-                        // Consultation publique
-                        .requestMatchers(HttpMethod.GET,
+                        .requestMatchers(
+                                HttpMethod.DELETE,
+                                "/api/v1/sessions/*/leave"
+                        ).hasRole("MEMBER")
+
+                        .requestMatchers(
+                                HttpMethod.PATCH,
+                                "/api/v1/sessions/*/cancel"
+                        ).hasRole("MEMBER")
+
+                        /*
+                         * Consultation publique.
+                         *
+                         * La création des salles n'est plus
+                         * accessible aux MEMBER.
+                         */
+                        .requestMatchers(
+                                HttpMethod.GET,
                                 "/api/v1/gyms",
                                 "/api/v1/gyms/**",
                                 "/api/v1/sessions",
                                 "/api/v1/sessions/*"
                         ).permitAll()
 
-                        .anyRequest().authenticated()
+                        .anyRequest()
+                        .authenticated()
                 )
-                .headers(headers -> headers.frameOptions(frame -> frame.disable()))
+
+                .headers(headers ->
+                        headers.frameOptions(
+                                frame ->
+                                        frame.disable()
+                        )
+                )
+
                 .addFilterBefore(
                         jwtAuthenticationFilter,
                         UsernamePasswordAuthenticationFilter.class
@@ -77,32 +133,55 @@ public class SecurityConfig {
     }
 
     @Bean
-    public CorsConfigurationSource corsConfigurationSource() {
-        CorsConfiguration configuration = new CorsConfiguration();
+    public CorsConfigurationSource
+    corsConfigurationSource() {
 
-        configuration.setAllowedOrigins(List.of(
-                "http://localhost:5173",
-                "https://project-train-buddy.vercel.app"
-        ));
+        CorsConfiguration configuration =
+                new CorsConfiguration();
+
+        configuration.setAllowedOrigins(
+                List.of(
+                        "http://localhost:5173",
+                        "https://project-train-buddy.vercel.app"
+                )
+        );
 
         configuration.setAllowedMethods(
-                List.of("GET", "POST", "PUT", "DELETE", "OPTIONS")
+                List.of(
+                        "GET",
+                        "POST",
+                        "PUT",
+                        "PATCH",
+                        "DELETE",
+                        "OPTIONS"
+                )
         );
 
         configuration.setAllowedHeaders(
-                List.of("Authorization", "Content-Type", "Accept")
+                List.of(
+                        "Authorization",
+                        "Content-Type",
+                        "Accept"
+                )
         );
 
         configuration.setExposedHeaders(
-                List.of("Authorization")
+                List.of(
+                        "Authorization"
+                )
         );
 
-        configuration.setAllowCredentials(true);
+        configuration.setAllowCredentials(
+                true
+        );
 
         UrlBasedCorsConfigurationSource source =
                 new UrlBasedCorsConfigurationSource();
 
-        source.registerCorsConfiguration("/**", configuration);
+        source.registerCorsConfiguration(
+                "/**",
+                configuration
+        );
 
         return source;
     }

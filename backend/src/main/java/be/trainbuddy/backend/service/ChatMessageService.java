@@ -34,17 +34,22 @@ public class ChatMessageService {
             ChatMessageRequest request,
             User currentUser
     ) {
-        TrainingSession session = getSession(sessionId);
+        TrainingSession session =
+                getSession(sessionId);
 
         SessionParticipant participant =
-                requireParticipation(
+                requireActiveParticipation(
                         sessionId,
                         currentUser
                 );
 
-        if (!"UPCOMING".equalsIgnoreCase(
-                session.getStatus()
-        )) {
+        refreshCompletedStatus(session);
+
+        if (
+                !"UPCOMING".equalsIgnoreCase(
+                        session.getStatus()
+                )
+        ) {
             throw new BadRequestException(
                     "Le chat de cette session n'accepte plus de nouveaux messages"
             );
@@ -54,8 +59,12 @@ public class ChatMessageService {
                 ChatMessage.builder()
                         .session(session)
                         .participant(participant)
-                        .message(request.message().trim())
-                        .sentAt(LocalDateTime.now())
+                        .message(
+                                request.message().trim()
+                        )
+                        .sentAt(
+                                LocalDateTime.now()
+                        )
                         .deleted(false)
                         .build();
 
@@ -69,9 +78,10 @@ public class ChatMessageService {
             UUID sessionId,
             User currentUser
     ) {
-        TrainingSession session = getSession(sessionId);
+        TrainingSession session =
+                getSession(sessionId);
 
-        requireParticipation(
+        requireActiveParticipation(
                 sessionId,
                 currentUser
         );
@@ -97,12 +107,12 @@ public class ChatMessageService {
                 );
     }
 
-    private SessionParticipant requireParticipation(
+    private SessionParticipant requireActiveParticipation(
             UUID sessionId,
             User currentUser
     ) {
         return participantRepository
-                .findBySessionIdAndUserId(
+                .findBySessionIdAndUserIdAndLeftAtIsNull(
                         sessionId,
                         currentUser.getId()
                 )
@@ -111,6 +121,34 @@ public class ChatMessageService {
                                 "Vous devez participer à cette session pour accéder au chat"
                         )
                 );
+    }
+
+    private void refreshCompletedStatus(
+            TrainingSession session
+    ) {
+        if (
+                !"UPCOMING".equalsIgnoreCase(
+                        session.getStatus()
+                )
+        ) {
+            return;
+        }
+
+        LocalDateTime endAt =
+                session.getStartAt()
+                        .plusMinutes(
+                                session.getDurationMin()
+                        );
+
+        if (
+                !endAt.isAfter(
+                        LocalDateTime.now()
+                )
+        ) {
+            session.setStatus(
+                    "COMPLETED"
+            );
+        }
     }
 
     private ChatMessageResponse toResponse(

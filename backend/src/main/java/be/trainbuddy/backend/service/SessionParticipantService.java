@@ -33,7 +33,8 @@ public class SessionParticipantService {
             User currentUser
     ) {
         TrainingSession session =
-                trainingSessionRepository.findByIdForUpdate(sessionId)
+                trainingSessionRepository
+                        .findByIdForUpdate(sessionId)
                         .orElseThrow(() ->
                                 new ResourceNotFoundException(
                                         "Session introuvable"
@@ -42,22 +43,71 @@ public class SessionParticipantService {
 
         ensureSessionAcceptsParticipants(session);
 
-        if (participantRepository.existsBySessionIdAndUserId(
-                sessionId,
-                currentUser.getId()
-        )) {
+        /*
+         * On recherche aussi une éventuelle
+         * ancienne participation quittée.
+         */
+        SessionParticipant existingParticipant =
+                participantRepository
+                        .findBySessionIdAndUserId(
+                                sessionId,
+                                currentUser.getId()
+                        )
+                        .orElse(null);
+
+        if (
+                existingParticipant != null
+                        && existingParticipant.getLeftAt() == null
+        ) {
             throw new ConflictException(
                     "Vous participez déjà à cette session"
             );
         }
 
         long currentParticipants =
-                participantRepository.countBySessionId(sessionId);
+                participantRepository
+                        .countBySessionIdAndLeftAtIsNull(
+                                sessionId
+                        );
 
-        if (currentParticipants >= session.getCapacity()) {
+        if (
+                currentParticipants
+                        >= session.getCapacity()
+        ) {
             throw new BadRequestException(
                     "La session est complète"
             );
+        }
+
+        /*
+         * Le membre avait déjà participé puis
+         * quitté : on réactive sa participation.
+         */
+        if (existingParticipant != null) {
+
+            if (existingParticipant.isCreator()) {
+                throw new BadRequestException(
+                        "Le créateur de la session ne peut pas la rejoindre à nouveau"
+                );
+            }
+
+            existingParticipant.setLeftAt(null);
+
+            existingParticipant.setJoinedAt(
+                    LocalDateTime.now()
+            );
+
+            try {
+                return toResponse(
+                        participantRepository.saveAndFlush(
+                                existingParticipant
+                        )
+                );
+            } catch (DataIntegrityViolationException ex) {
+                throw new ConflictException(
+                        "Vous participez déjà à cette session"
+                );
+            }
         }
 
         SessionParticipant participant =
@@ -66,14 +116,18 @@ public class SessionParticipantService {
                         .user(currentUser)
                         .joinedAt(LocalDateTime.now())
                         .recognitionCode(
-                                generateUniqueRecognitionCode(sessionId)
+                                generateUniqueRecognitionCode(
+                                        sessionId
+                                )
                         )
                         .creator(false)
+                        .leftAt(null)
                         .build();
 
         try {
             return toResponse(
-                    participantRepository.saveAndFlush(participant)
+                    participantRepository
+                            .saveAndFlush(participant)
             );
         } catch (DataIntegrityViolationException ex) {
             throw new ConflictException(
@@ -89,7 +143,9 @@ public class SessionParticipantService {
         ensureSessionExists(sessionId);
 
         return participantRepository
-                .findBySessionIdOrderByJoinedAtAsc(sessionId)
+                .findBySessionIdAndLeftAtIsNullOrderByJoinedAtAsc(
+                        sessionId
+                )
                 .stream()
                 .map(this::toResponse)
                 .toList();
@@ -103,7 +159,7 @@ public class SessionParticipantService {
         ensureSessionExists(sessionId);
 
         return participantRepository
-                .findBySessionIdAndUserId(
+                .findBySessionIdAndUserIdAndLeftAtIsNull(
                         sessionId,
                         currentUser.getId()
                 )
@@ -122,6 +178,61 @@ public class SessionParticipantService {
     }
 
     @Transactional
+    public void leaveSession(
+            UUID sessionId,
+            User currentUser
+    ) {
+        TrainingSession session =
+                trainingSessionRepository
+                        .findById(sessionId)
+                        .orElseThrow(() ->
+                                new ResourceNotFoundException(
+                                        "Session introuvable"
+                                )
+                        );
+
+        refreshCompletedStatus(session);
+
+        if (
+                !"UPCOMING".equalsIgnoreCase(
+                        session.getStatus()
+                )
+        ) {
+            throw new BadRequestException(
+                    "Seule une session à venir peut être quittée"
+            );
+        }
+
+        SessionParticipant participant =
+                participantRepository
+                        .findBySessionIdAndUserIdAndLeftAtIsNull(
+                                sessionId,
+                                currentUser.getId()
+                        )
+                        .orElseThrow(() ->
+                                new ResourceNotFoundException(
+                                        "Vous ne participez pas à cette session"
+                                )
+                        );
+
+        /*
+         * Le créateur doit annuler sa session,
+         * pas la quitter.
+         */
+        if (participant.isCreator()) {
+            throw new BadRequestException(
+                    "Le créateur ne peut pas quitter sa propre session. Il doit l'annuler."
+            );
+        }
+
+        participant.setLeftAt(
+                LocalDateTime.now()
+        );
+
+        participantRepository.save(participant);
+    }
+
+    @Transactional
     public SessionParticipant registerCreator(
             TrainingSession session,
             User creator
@@ -137,13 +248,20 @@ public class SessionParticipantService {
                                 )
                         )
                         .creator(true)
+                        .leftAt(null)
                         .build();
 
         return participantRepository.save(participant);
     }
 
-    private void ensureSessionExists(UUID sessionId) {
-        if (!trainingSessionRepository.existsById(sessionId)) {
+    private void ensureSessionExists(
+            UUID sessionId
+    ) {
+        if (
+                !trainingSessionRepository.existsById(
+                        sessionId
+                )
+        ) {
             throw new ResourceNotFoundException(
                     "Session introuvable"
             );
@@ -153,12 +271,46 @@ public class SessionParticipantService {
     private void ensureSessionAcceptsParticipants(
             TrainingSession session
     ) {
-        if (!"UPCOMING".equalsIgnoreCase(
-                session.getStatus()
-        )) {
+        refreshCompletedStatus(session);
+
+        if (
+                !"UPCOMING".equalsIgnoreCase(
+                        session.getStatus()
+                )
+        ) {
             throw new BadRequestException(
                     "Cette session n'accepte plus de nouveaux participants"
             );
+        }
+    }
+
+    private void refreshCompletedStatus(
+            TrainingSession session
+    ) {
+        if (
+                !"UPCOMING".equalsIgnoreCase(
+                        session.getStatus()
+                )
+        ) {
+            return;
+        }
+
+        LocalDateTime endAt =
+                session.getStartAt()
+                        .plusMinutes(
+                                session.getDurationMin()
+                        );
+
+        if (
+                !endAt.isAfter(
+                        LocalDateTime.now()
+                )
+        ) {
+            session.setStatus(
+                    "COMPLETED"
+            );
+
+            trainingSessionRepository.save(session);
         }
     }
 
@@ -178,19 +330,29 @@ public class SessionParticipantService {
     private String generateUniqueRecognitionCode(
             UUID sessionId
     ) {
-        for (int attempt = 0; attempt < 20; attempt++) {
+        for (
+                int attempt = 0;
+                attempt < 20;
+                attempt++
+        ) {
+            int number =
+                    ThreadLocalRandom
+                            .current()
+                            .nextInt(
+                                    1000,
+                                    10000
+                            );
 
-            int number = ThreadLocalRandom
-                    .current()
-                    .nextInt(1000, 10000);
+            String code =
+                    "TB-" + number;
 
-            String code = "TB-" + number;
-
-            if (!participantRepository
-                    .existsBySessionIdAndRecognitionCode(
-                            sessionId,
-                            code
-                    )) {
+            if (
+                    !participantRepository
+                            .existsBySessionIdAndRecognitionCode(
+                                    sessionId,
+                                    code
+                            )
+            ) {
                 return code;
             }
         }

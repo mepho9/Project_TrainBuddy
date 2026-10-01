@@ -1,11 +1,15 @@
 package be.trainbuddy.backend.service;
 
+import be.trainbuddy.backend.dto.MySessionsResponse;
 import be.trainbuddy.backend.dto.TrainingSessionRequest;
 import be.trainbuddy.backend.dto.TrainingSessionResponse;
 import be.trainbuddy.backend.entity.Gym;
+import be.trainbuddy.backend.entity.SessionParticipant;
 import be.trainbuddy.backend.entity.TrainingSession;
 import be.trainbuddy.backend.entity.User;
 import be.trainbuddy.backend.exception.BadRequestException;
+import be.trainbuddy.backend.exception.ConflictException;
+import be.trainbuddy.backend.exception.ForbiddenException;
 import be.trainbuddy.backend.exception.ResourceNotFoundException;
 import be.trainbuddy.backend.repository.GymRepository;
 import be.trainbuddy.backend.repository.SessionParticipantRepository;
@@ -44,7 +48,17 @@ public class TrainingSessionService {
     private final SessionParticipantService
             participantService;
 
-    @Transactional(readOnly = true)
+    /*
+     * Liste publique des sessions.
+     *
+     * Seules les sessions UPCOMING sont exposées
+     * dans la page de recherche.
+     *
+     * Les sessions COMPLETED et CANCELLED restent
+     * disponibles dans "Mes sessions" afin de
+     * conserver l'historique personnel.
+     */
+    @Transactional
     public List<TrainingSessionResponse> search(
 
             String q,
@@ -69,13 +83,46 @@ public class TrainingSessionService {
         List<TrainingSession> sessions =
                 trainingSessionRepository.findAll();
 
+        /*
+         * Avant de construire la liste publique,
+         * les anciennes sessions UPCOMING dont
+         * la durée est dépassée deviennent
+         * automatiquement COMPLETED.
+         */
+        sessions.forEach(
+                this::refreshStatus
+        );
+
         Map<UUID, Long> participantCounts =
                 loadParticipantCounts(sessions);
 
         List<SessionWithDistance> results =
                 new ArrayList<>();
 
-        for (TrainingSession session : sessions) {
+        for (
+                TrainingSession session :
+                sessions
+        ) {
+
+            /*
+             * La page publique sert à découvrir
+             * des sessions encore exploitables.
+             *
+             * On masque donc :
+             *
+             * COMPLETED
+             * CANCELLED
+             *
+             * Elles restent accessibles dans
+             * l'historique personnel.
+             */
+            if (
+                    !"UPCOMING".equalsIgnoreCase(
+                            session.getStatus()
+                    )
+            ) {
+                continue;
+            }
 
             long participantCount =
                     participantCounts.getOrDefault(
@@ -92,29 +139,15 @@ public class TrainingSessionService {
                             0
                     );
 
-            /*
-             * Recherche textuelle.
-             *
-             * Exemple :
-             * musculation basic
-             *
-             * Les deux mots doivent être trouvés.
-             *
-             * Exemple :
-             * musculation -cardio
-             *
-             * "cardio" devient un mot à exclure.
-             */
-            if (!matchesTextQuery(
-                    session,
-                    q
-            )) {
+            if (
+                    !matchesTextQuery(
+                            session,
+                            q
+                    )
+            ) {
                 continue;
             }
 
-            /*
-             * Filtre par salle.
-             */
             if (
                     gymId != null
                             && !gymId.equals(
@@ -124,9 +157,6 @@ public class TrainingSessionService {
                 continue;
             }
 
-            /*
-             * Filtre par activité.
-             */
             if (
                     activityType != null
                             && !activityType.isBlank()
@@ -139,9 +169,6 @@ public class TrainingSessionService {
                 continue;
             }
 
-            /*
-             * Filtre par date.
-             */
             if (
                     date != null
                             && !session
@@ -153,28 +180,18 @@ public class TrainingSessionService {
             }
 
             /*
-             * Sessions possédant encore
-             * des places.
-             *
-             * On considère également
-             * qu'une session doit être
-             * UPCOMING.
+             * Si l'utilisateur coche
+             * "places disponibles uniquement",
+             * les sessions UPCOMING déjà pleines
+             * sont également masquées.
              */
             if (
                     availableOnly
-                            && (
-                            !"UPCOMING".equalsIgnoreCase(
-                                    session.getStatus()
-                            )
-                                    || availablePlaces <= 0
-                    )
+                            && availablePlaces <= 0
             ) {
                 continue;
             }
 
-            /*
-             * Calcul éventuel de la distance.
-             */
             Double distanceKm =
                     calculateDistanceKm(
                             latitude,
@@ -182,15 +199,6 @@ public class TrainingSessionService {
                             session.getGym()
                     );
 
-            /*
-             * Si un rayon est demandé,
-             * on retire les salles
-             * trop éloignées.
-             *
-             * Une salle sans coordonnées
-             * ne peut pas être considérée
-             * comme étant dans le rayon.
-             */
             if (radiusKm != null) {
 
                 if (
@@ -214,9 +222,8 @@ public class TrainingSessionService {
                 comparator;
 
         /*
-         * Si la géolocalisation est utilisée,
-         * le résultat est trié du plus proche
-         * au plus éloigné.
+         * Si la géolocalisation est active :
+         * plus proche d'abord.
          */
         if (
                 sortByDistance
@@ -241,7 +248,8 @@ public class TrainingSessionService {
         } else {
 
             /*
-             * Sinon, tri chronologique.
+             * Sans géolocalisation :
+             * prochaine session d'abord.
              */
             comparator =
                     Comparator.comparing(
@@ -263,7 +271,7 @@ public class TrainingSessionService {
                 .toList();
     }
 
-    @Transactional(readOnly = true)
+    @Transactional
     public TrainingSessionResponse findById(
             UUID id
     ) {
@@ -277,14 +285,109 @@ public class TrainingSessionService {
                                 )
                         );
 
+        refreshStatus(session);
+
         long participantCount =
                 participantRepository
-                        .countBySessionId(id);
+                        .countBySessionIdAndLeftAtIsNull(
+                                id
+                        );
 
         return toResponse(
                 session,
                 participantCount,
                 null
+        );
+    }
+
+    /*
+     * Historique personnel.
+     *
+     * Ici on conserve volontairement :
+     *
+     * UPCOMING
+     * COMPLETED
+     * CANCELLED
+     *
+     * afin que le membre retrouve les sessions
+     * auxquelles il est personnellement lié.
+     */
+    @Transactional
+    public MySessionsResponse getMySessions(
+            User currentUser
+    ) {
+
+        List<SessionParticipant>
+                participations =
+                participantRepository
+                        .findActiveByUserIdWithSession(
+                                currentUser.getId()
+                        );
+
+        List<TrainingSession> sessions =
+                participations.stream()
+                        .map(
+                                SessionParticipant::getSession
+                        )
+                        .toList();
+
+        sessions.forEach(
+                this::refreshStatus
+        );
+
+        Map<UUID, Long> participantCounts =
+                loadParticipantCounts(sessions);
+
+        List<TrainingSessionResponse>
+                created =
+                participations.stream()
+                        .filter(
+                                SessionParticipant::isCreator
+                        )
+                        .map(participant ->
+                                toResponse(
+                                        participant.getSession(),
+
+                                        participantCounts
+                                                .getOrDefault(
+                                                        participant
+                                                                .getSession()
+                                                                .getId(),
+                                                        0L
+                                                ),
+
+                                        null
+                                )
+                        )
+                        .toList();
+
+        List<TrainingSessionResponse>
+                joined =
+                participations.stream()
+                        .filter(
+                                participant ->
+                                        !participant.isCreator()
+                        )
+                        .map(participant ->
+                                toResponse(
+                                        participant.getSession(),
+
+                                        participantCounts
+                                                .getOrDefault(
+                                                        participant
+                                                                .getSession()
+                                                                .getId(),
+                                                        0L
+                                                ),
+
+                                        null
+                                )
+                        )
+                        .toList();
+
+        return new MySessionsResponse(
+                created,
+                joined
         );
     }
 
@@ -354,10 +457,6 @@ public class TrainingSessionService {
                 trainingSessionRepository
                         .save(session);
 
-        /*
-         * Le créateur devient automatiquement
-         * le premier participant.
-         */
         participantService.registerCreator(
                 savedSession,
                 currentUser
@@ -371,9 +470,114 @@ public class TrainingSessionService {
     }
 
     /*
-     * Récupération du nombre de participants
-     * pour toutes les sessions en une seule fois.
+     * Annulation par le créateur uniquement.
      */
+    @Transactional
+    public TrainingSessionResponse cancelSession(
+            UUID sessionId,
+            User currentUser
+    ) {
+
+        TrainingSession session =
+                trainingSessionRepository
+                        .findById(sessionId)
+                        .orElseThrow(() ->
+                                new ResourceNotFoundException(
+                                        "Session introuvable"
+                                )
+                        );
+
+        refreshStatus(session);
+
+        boolean creator =
+                participantRepository
+                        .existsBySessionIdAndUserIdAndCreatorTrueAndLeftAtIsNull(
+                                sessionId,
+                                currentUser.getId()
+                        );
+
+        if (!creator) {
+
+            throw new ForbiddenException(
+                    "Seul le créateur peut annuler cette session"
+            );
+        }
+
+        if (
+                "CANCELLED".equalsIgnoreCase(
+                        session.getStatus()
+                )
+        ) {
+
+            throw new ConflictException(
+                    "Cette session est déjà annulée"
+            );
+        }
+
+        if (
+                "COMPLETED".equalsIgnoreCase(
+                        session.getStatus()
+                )
+        ) {
+
+            throw new BadRequestException(
+                    "Une session terminée ne peut plus être annulée"
+            );
+        }
+
+        session.setStatus(
+                "CANCELLED"
+        );
+
+        trainingSessionRepository.save(session);
+
+        long participantCount =
+                participantRepository
+                        .countBySessionIdAndLeftAtIsNull(
+                                sessionId
+                        );
+
+        return toResponse(
+                session,
+                participantCount,
+                null
+        );
+    }
+
+    /*
+     * Une session UPCOMING devient automatiquement
+     * COMPLETED lorsque son heure de fin est passée.
+     */
+    private void refreshStatus(
+            TrainingSession session
+    ) {
+
+        if (
+                !"UPCOMING".equalsIgnoreCase(
+                        session.getStatus()
+                )
+        ) {
+            return;
+        }
+
+        LocalDateTime endAt =
+                session.getStartAt()
+                        .plusMinutes(
+                                session.getDurationMin()
+                        );
+
+        if (
+                !endAt.isAfter(
+                        LocalDateTime.now()
+                )
+        ) {
+
+            session.setStatus(
+                    "COMPLETED"
+            );
+        }
+    }
+
     private Map<UUID, Long>
     loadParticipantCounts(
             List<TrainingSession> sessions
@@ -388,6 +592,7 @@ public class TrainingSessionService {
                         .map(
                                 TrainingSession::getId
                         )
+                        .distinct()
                         .toList();
 
         Map<UUID, Long> counts =
@@ -416,17 +621,6 @@ public class TrainingSessionService {
         return counts;
     }
 
-    /*
-     * Recherche textuelle.
-     *
-     * On recherche dans :
-     *
-     * titre
-     * activité
-     * description
-     * nom de la salle
-     * adresse de la salle
-     */
     private boolean matchesTextQuery(
 
             TrainingSession session,
@@ -480,11 +674,6 @@ public class TrainingSessionService {
                 continue;
             }
 
-            /*
-             * "-cardio" signifie :
-             * exclure les résultats
-             * contenant cardio.
-             */
             if (
                     term.startsWith("-")
                             && term.length() > 1
@@ -494,21 +683,19 @@ public class TrainingSessionService {
                         term.substring(1);
 
                 if (
-                        searchableText
-                                .contains(excluded)
+                        searchableText.contains(
+                                excluded
+                        )
                 ) {
                     return false;
                 }
 
             } else {
 
-                /*
-                 * Tous les termes positifs
-                 * doivent apparaître.
-                 */
                 if (
-                        !searchableText
-                                .contains(term)
+                        !searchableText.contains(
+                                term
+                        )
                 ) {
                     return false;
                 }
@@ -518,10 +705,6 @@ public class TrainingSessionService {
         return true;
     }
 
-    /*
-     * Calcul de distance selon
-     * la formule de Haversine.
-     */
     private Double calculateDistanceKm(
 
             Double userLatitude,
@@ -608,19 +791,11 @@ public class TrainingSessionService {
         double distance =
                 EARTH_RADIUS_KM * c;
 
-        /*
-         * Deux décimales suffisent
-         * pour l'affichage.
-         */
         return Math.round(
                 distance * 100.0
         ) / 100.0;
     }
 
-    /*
-     * Validation des paramètres
-     * reçus par l'API.
-     */
     private void validateGeolocationParameters(
 
             Double latitude,
@@ -630,11 +805,6 @@ public class TrainingSessionService {
 
     ) {
 
-        /*
-         * Impossible de fournir seulement
-         * une latitude ou seulement
-         * une longitude.
-         */
         if (
                 (latitude == null)
                         != (longitude == null)
@@ -771,10 +941,6 @@ public class TrainingSessionService {
                 : value;
     }
 
-    /*
-     * Objet interne uniquement utilisé
-     * pendant le calcul de recherche.
-     */
     private record SessionWithDistance(
 
             TrainingSession session,

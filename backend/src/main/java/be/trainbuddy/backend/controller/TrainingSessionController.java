@@ -1,5 +1,6 @@
 package be.trainbuddy.backend.controller;
 
+import be.trainbuddy.backend.dto.MySessionsResponse;
 import be.trainbuddy.backend.dto.TrainingSessionRequest;
 import be.trainbuddy.backend.dto.TrainingSessionResponse;
 import be.trainbuddy.backend.entity.User;
@@ -62,9 +63,7 @@ public class TrainingSessionController {
 
             @RequestParam(defaultValue = "false")
             boolean sortByDistance
-
     ) {
-
         return trainingSessionService.search(
                 q,
                 gymId,
@@ -75,6 +74,19 @@ public class TrainingSessionController {
                 longitude,
                 radiusKm,
                 sortByDistance
+        );
+    }
+
+    @GetMapping("/my")
+    @Operation(
+            summary = "Lister mes sessions créées et rejointes"
+    )
+    public MySessionsResponse getMySessions(
+            @AuthenticationPrincipal
+            User currentUser
+    ) {
+        return trainingSessionService.getMySessions(
+                currentUser
         );
     }
 
@@ -100,11 +112,23 @@ public class TrainingSessionController {
 
             @AuthenticationPrincipal
             User currentUser
-
     ) {
-
         return trainingSessionService.create(
                 request,
+                currentUser
+        );
+    }
+
+    @PatchMapping("/{id}/cancel")
+    @Operation(
+            summary = "Annuler une session dont je suis le créateur"
+    )
+    public TrainingSessionResponse cancelSession(
+            @PathVariable UUID id,
+            @AuthenticationPrincipal User currentUser
+    ) {
+        return trainingSessionService.cancelSession(
+                id,
                 currentUser
         );
     }
