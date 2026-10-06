@@ -6,6 +6,9 @@ import {
 
 import api from "../api/axios";
 
+import AdminReportsSection
+  from "../components/AdminReportsSection";
+
 const EMPTY_GYM = {
   name: "",
   type: "",
@@ -32,26 +35,37 @@ export default function AdminPage() {
   const [sessions, setSessions] =
     useState([]);
 
+  const [reports, setReports] =
+    useState([]);
+
   const [loading, setLoading] =
     useState(true);
 
   const [message, setMessage] =
     useState("");
 
-  const [userSearch, setUserSearch] =
-    useState("");
+  const [
+    userSearch,
+    setUserSearch,
+  ] = useState("");
 
-  const [sessionSearch, setSessionSearch] =
-    useState("");
+  const [
+    sessionSearch,
+    setSessionSearch,
+  ] = useState("");
 
-  const [sessionStatus, setSessionStatus] =
-    useState("");
+  const [
+    sessionStatus,
+    setSessionStatus,
+  ] = useState("");
 
   const [gymForm, setGymForm] =
     useState(EMPTY_GYM);
 
-  const [editingGymId, setEditingGymId] =
-    useState(null);
+  const [
+    editingGymId,
+    setEditingGymId,
+  ] = useState(null);
 
   /*
    * =========================
@@ -59,31 +73,32 @@ export default function AdminPage() {
    * =========================
    */
 
-  const fetchUsers = async () => {
-    const response =
-      await api.get(
-        "/admin/users"
+  const fetchUsers =
+    async () => {
+      const response =
+        await api.get(
+          "/admin/users"
+        );
+
+      setUsers(
+        response.data
       );
+    };
 
-    setUsers(
-      response.data
-    );
-  };
+  const fetchGyms =
+    async () => {
+      const response =
+        await api.get(
+          "/admin/gyms"
+        );
 
-  const fetchGyms = async () => {
-    const response =
-      await api.get(
-        "/admin/gyms"
+      setGyms(
+        response.data
       );
-
-    setGyms(
-      response.data
-    );
-  };
+    };
 
   const fetchSessions =
     async () => {
-
       const response =
         await api.get(
           "/admin/sessions"
@@ -94,9 +109,20 @@ export default function AdminPage() {
       );
     };
 
+  const fetchReports =
+    async () => {
+      const response =
+        await api.get(
+          "/admin/reports"
+        );
+
+      setReports(
+        response.data
+      );
+    };
+
   const fetchEverything =
     async () => {
-
       setLoading(true);
 
       try {
@@ -104,9 +130,9 @@ export default function AdminPage() {
           fetchUsers(),
           fetchGyms(),
           fetchSessions(),
+          fetchReports(),
         ]);
       } catch (error) {
-
         setMessage(
           error.response?.data
             ?.message ||
@@ -116,7 +142,6 @@ export default function AdminPage() {
         console.error(
           error
         );
-
       } finally {
         setLoading(false);
       }
@@ -134,7 +159,6 @@ export default function AdminPage() {
 
   const banUser =
     async (user) => {
-
       const confirmed =
         window.confirm(
           `Bannir ${user.email} ?\n\nIl sera retiré de ses sessions et ses futures sessions créées seront annulées.`
@@ -156,25 +180,21 @@ export default function AdminPage() {
         await Promise.all([
           fetchUsers(),
           fetchSessions(),
+          fetchReports(),
         ]);
-
       } catch (error) {
-
         setMessage(
           error.response?.data
             ?.message ||
             "Impossible de bannir cet utilisateur."
         );
 
-        console.error(
-          error
-        );
+        console.error(error);
       }
     };
 
   const unbanUser =
     async (user) => {
-
       const confirmed =
         window.confirm(
           `Débannir ${user.email} ?`
@@ -193,19 +213,18 @@ export default function AdminPage() {
           `${user.email} a été débanni.`
         );
 
-        await fetchUsers();
-
+        await Promise.all([
+          fetchUsers(),
+          fetchReports(),
+        ]);
       } catch (error) {
-
         setMessage(
           error.response?.data
             ?.message ||
             "Impossible de débannir cet utilisateur."
         );
 
-        console.error(
-          error
-        );
+        console.error(error);
       }
     };
 
@@ -217,7 +236,6 @@ export default function AdminPage() {
 
   const saveGym =
     async (event) => {
-
       event.preventDefault();
 
       const payload = {
@@ -231,14 +249,16 @@ export default function AdminPage() {
           gymForm.address.trim(),
 
         latitude:
-          gymForm.latitude === ""
+          gymForm.latitude ===
+          ""
             ? null
             : Number(
                 gymForm.latitude
               ),
 
         longitude:
-          gymForm.longitude === ""
+          gymForm.longitude ===
+          ""
             ? null
             : Number(
                 gymForm.longitude
@@ -246,9 +266,7 @@ export default function AdminPage() {
       };
 
       try {
-
         if (editingGymId) {
-
           await api.put(
             `/admin/gyms/${editingGymId}`,
             payload
@@ -257,9 +275,7 @@ export default function AdminPage() {
           setMessage(
             "Salle modifiée avec succès."
           );
-
         } else {
-
           await api.post(
             "/admin/gyms",
             payload
@@ -279,24 +295,19 @@ export default function AdminPage() {
         );
 
         await fetchGyms();
-
       } catch (error) {
-
         setMessage(
           error.response?.data
             ?.message ||
             "Impossible d'enregistrer la salle."
         );
 
-        console.error(
-          error
-        );
+        console.error(error);
       }
     };
 
   const editGym =
     (gym) => {
-
       setEditingGymId(
         gym.id
       );
@@ -309,7 +320,8 @@ export default function AdminPage() {
           gym.type || "",
 
         address:
-          gym.address || "",
+          gym.address ||
+          "",
 
         latitude:
           gym.latitude ??
@@ -328,7 +340,6 @@ export default function AdminPage() {
 
   const cancelGymEdition =
     () => {
-
       setEditingGymId(
         null
       );
@@ -340,7 +351,6 @@ export default function AdminPage() {
 
   const toggleGym =
     async (gym) => {
-
       const newStatus =
         !gym.active;
 
@@ -356,7 +366,6 @@ export default function AdminPage() {
       }
 
       try {
-
         await api.patch(
           `/admin/gyms/${gym.id}/active`,
           null,
@@ -375,18 +384,14 @@ export default function AdminPage() {
         );
 
         await fetchGyms();
-
       } catch (error) {
-
         setMessage(
           error.response?.data
             ?.message ||
             "Impossible de modifier l'état de la salle."
         );
 
-        console.error(
-          error
-        );
+        console.error(error);
       }
     };
 
@@ -398,7 +403,6 @@ export default function AdminPage() {
 
   const cancelSession =
     async (session) => {
-
       const confirmed =
         window.confirm(
           `Retirer la session "${session.title}" ?\n\nElle passera au statut CANCELLED et ne sera plus visible dans la recherche publique.`
@@ -409,7 +413,6 @@ export default function AdminPage() {
       }
 
       try {
-
         await api.patch(
           `/admin/sessions/${session.id}/cancel`
         );
@@ -418,31 +421,161 @@ export default function AdminPage() {
           "La session a été retirée."
         );
 
-        await fetchSessions();
-
+        await Promise.all([
+          fetchSessions(),
+          fetchReports(),
+        ]);
       } catch (error) {
-
         setMessage(
           error.response?.data
             ?.message ||
             "Impossible de retirer cette session."
         );
 
-        console.error(
-          error
-        );
+        console.error(error);
       }
     };
 
   /*
    * =========================
-   * FILTRES FRONTEND
+   * SIGNALEMENTS
+   * =========================
+   */
+
+  const reviewReport =
+    async (report) => {
+      try {
+        await api.patch(
+          `/admin/reports/${report.id}/review`
+        );
+
+        setMessage(
+          "Signalement pris en charge."
+        );
+
+        await fetchReports();
+      } catch (error) {
+        setMessage(
+          error.response?.data
+            ?.message ||
+            "Impossible de prendre ce signalement en charge."
+        );
+
+        console.error(error);
+      }
+    };
+
+  const ignoreReport =
+    async (report) => {
+      const confirmed =
+        window.confirm(
+          "Fermer ce signalement sans sanction ?"
+        );
+
+      if (!confirmed) {
+        return;
+      }
+
+      try {
+        await api.patch(
+          `/admin/reports/${report.id}/ignore`
+        );
+
+        setMessage(
+          "Signalement fermé sans sanction."
+        );
+
+        await fetchReports();
+      } catch (error) {
+        setMessage(
+          error.response?.data
+            ?.message ||
+            "Impossible de fermer ce signalement."
+        );
+
+        console.error(error);
+      }
+    };
+
+  const cancelReportedSession =
+    async (report) => {
+      const confirmed =
+        window.confirm(
+          `Retirer la session "${report.targetSessionTitle}" à la suite de ce signalement ?`
+        );
+
+      if (!confirmed) {
+        return;
+      }
+
+      try {
+        await api.patch(
+          `/admin/reports/${report.id}/cancel-session`
+        );
+
+        setMessage(
+          "Session retirée et signalement fermé."
+        );
+
+        await Promise.all([
+          fetchReports(),
+          fetchSessions(),
+        ]);
+      } catch (error) {
+        setMessage(
+          error.response?.data
+            ?.message ||
+            "Impossible de retirer cette session."
+        );
+
+        console.error(error);
+      }
+    };
+
+  const banReportedUser =
+    async (report) => {
+      const confirmed =
+        window.confirm(
+          `Bannir ${report.targetUserEmail} à la suite de ce signalement ?`
+        );
+
+      if (!confirmed) {
+        return;
+      }
+
+      try {
+        await api.patch(
+          `/admin/reports/${report.id}/ban-user`
+        );
+
+        setMessage(
+          "Utilisateur banni et signalement fermé."
+        );
+
+        await Promise.all([
+          fetchReports(),
+          fetchUsers(),
+          fetchSessions(),
+        ]);
+      } catch (error) {
+        setMessage(
+          error.response?.data
+            ?.message ||
+            "Impossible de bannir cet utilisateur."
+        );
+
+        console.error(error);
+      }
+    };
+
+  /*
+   * =========================
+   * FILTRES
    * =========================
    */
 
   const filteredUsers =
     useMemo(() => {
-
       const query =
         userSearch
           .trim()
@@ -458,7 +591,6 @@ export default function AdminPage() {
             .toLowerCase()
             .includes(query)
       );
-
     }, [
       users,
       userSearch,
@@ -466,7 +598,6 @@ export default function AdminPage() {
 
   const filteredSessions =
     useMemo(() => {
-
       const query =
         sessionSearch
           .trim()
@@ -474,21 +605,28 @@ export default function AdminPage() {
 
       return sessions.filter(
         (session) => {
-
           const matchesSearch =
             !query ||
             session.title
               .toLowerCase()
-              .includes(query) ||
+              .includes(
+                query
+              ) ||
             session.activityType
               .toLowerCase()
-              .includes(query) ||
+              .includes(
+                query
+              ) ||
             session.gymName
               .toLowerCase()
-              .includes(query) ||
+              .includes(
+                query
+              ) ||
             session.creatorEmail
               .toLowerCase()
-              .includes(query);
+              .includes(
+                query
+              );
 
           const matchesStatus =
             !sessionStatus ||
@@ -501,7 +639,6 @@ export default function AdminPage() {
           );
         }
       );
-
     }, [
       sessions,
       sessionSearch,
@@ -523,8 +660,8 @@ export default function AdminPage() {
 
         <p>
           Gérez les utilisateurs,
-          les salles et les sessions
-          de la plateforme.
+          les salles, les sessions et
+          les signalements de la plateforme.
         </p>
 
       </section>
@@ -540,6 +677,7 @@ export default function AdminPage() {
         style={{
           width:
             "fit-content",
+
           marginBottom:
             "28px",
         }}
@@ -596,6 +734,28 @@ export default function AdminPage() {
           {sessions.length})
         </button>
 
+        <button
+          className={
+            activeTab ===
+            "reports"
+              ? "active"
+              : ""
+          }
+          onClick={() =>
+            setActiveTab(
+              "reports"
+            )
+          }
+        >
+          Signalements (
+          {reports.filter(
+            (report) =>
+              report.status !==
+              "CLOSED"
+          ).length}
+          )
+        </button>
+
       </div>
 
       {loading ? (
@@ -643,9 +803,7 @@ export default function AdminPage() {
           {activeTab ===
             "gyms" && (
             <GymsSection
-              gyms={
-                gyms
-              }
+              gyms={gyms}
               gymForm={
                 gymForm
               }
@@ -690,6 +848,25 @@ export default function AdminPage() {
               }
               onCancel={
                 cancelSession
+              }
+            />
+          )}
+
+          {activeTab ===
+            "reports" && (
+            <AdminReportsSection
+              reports={reports}
+              onReview={
+                reviewReport
+              }
+              onIgnore={
+                ignoreReport
+              }
+              onCancelSession={
+                cancelReportedSession
+              }
+              onBanUser={
+                banReportedUser
               }
             />
           )}
@@ -741,7 +918,6 @@ function UsersSection({
 
         {users.map(
           (user) => {
-
             const isCurrentAdmin =
               user.email ===
               currentEmail;
@@ -753,17 +929,13 @@ function UsersSection({
             return (
               <article
                 className="session-card"
-                key={
-                  user.id
-                }
+                key={user.id}
               >
 
                 <div className="session-card-header">
 
                   <span className="badge">
-                    {
-                      user.role
-                    }
+                    {user.role}
                   </span>
 
                   <span
@@ -887,9 +1059,7 @@ function GymsSection({
     <>
       <form
         className="create-session-form"
-        onSubmit={
-          onSave
-        }
+        onSubmit={onSave}
       >
 
         <h3
@@ -1071,9 +1241,7 @@ function GymsSection({
           (gym) => (
             <article
               className="gym-card"
-              key={
-                gym.id
-              }
+              key={gym.id}
             >
 
               <div className="gym-icon">
@@ -1096,9 +1264,7 @@ function GymsSection({
 
               </div>
 
-              <div
-                className="session-meta"
-              >
+              <div className="session-meta">
 
                 <span>
                   État :{" "}
@@ -1253,9 +1419,7 @@ function SessionsSection({
           (session) => (
             <article
               className="session-card"
-              key={
-                session.id
-              }
+              key={session.id}
             >
 
               <div className="session-card-header">
@@ -1279,9 +1443,7 @@ function SessionsSection({
               </div>
 
               <h3>
-                {
-                  session.title
-                }
+                {session.title}
               </h3>
 
               <p className="activity">
@@ -1366,7 +1528,9 @@ function SessionsSection({
   );
 }
 
-function formatDate(value) {
+function formatDate(
+  value
+) {
   if (!value) {
     return "Inconnue";
   }

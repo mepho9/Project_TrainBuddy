@@ -15,6 +15,11 @@ function App() {
   const initialRole =
     localStorage.getItem("role");
 
+  const requestedPage =
+    new URLSearchParams(
+      window.location.search
+    ).get("page");
+
   const [isAuthenticated, setIsAuthenticated] =
     useState(
       Boolean(
@@ -32,6 +37,8 @@ function App() {
     useState(
       initialRole === "ADMIN"
         ? "admin"
+        : requestedPage === "profile"
+        ? "profile"
         : "sessions"
     );
 
@@ -39,15 +46,24 @@ function App() {
     const authenticatedRole =
       localStorage.getItem("role");
 
+    const page =
+      new URLSearchParams(
+        window.location.search
+      ).get("page");
+
     setRole(
       authenticatedRole
     );
 
-    setIsAuthenticated(true);
+    setIsAuthenticated(
+      true
+    );
 
     setActivePage(
       authenticatedRole === "ADMIN"
         ? "admin"
+        : page === "profile"
+        ? "profile"
         : "sessions"
     );
   };
@@ -65,10 +81,6 @@ function App() {
       "role"
     );
 
-    /*
-     * Nettoyage de données provenant
-     * d'anciennes versions de TrainBuddy.
-     */
     localStorage.removeItem(
       "participantIds"
     );
@@ -97,7 +109,8 @@ function App() {
   };
 
   if (!isAuthenticated) {
-    return authMode === "login" ? (
+    return authMode ===
+      "login" ? (
       <LoginPage
         onLoginSuccess={
           handleAuthSuccess
@@ -149,6 +162,7 @@ function App() {
 
       {role !== "ADMIN" && (
         <>
+
           {activePage ===
             "sessions" && (
             <SessionsPage />
@@ -167,6 +181,7 @@ function App() {
               }
             />
           )}
+
         </>
       )}
 

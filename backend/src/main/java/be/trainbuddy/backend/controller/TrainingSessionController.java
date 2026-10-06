@@ -26,13 +26,15 @@ import java.util.UUID;
 )
 public class TrainingSessionController {
 
-    private final TrainingSessionService trainingSessionService;
+    private final TrainingSessionService
+            trainingSessionService;
 
     @GetMapping
     @Operation(
             summary = "Rechercher et lister les sessions d'entraînement"
     )
-    public List<TrainingSessionResponse> getAllSessions(
+    public List<TrainingSessionResponse>
+    getAllSessions(
 
             @RequestParam(required = false)
             String q,
@@ -62,9 +64,15 @@ public class TrainingSessionController {
             Double radiusKm,
 
             @RequestParam(defaultValue = "false")
-            boolean sortByDistance
+            boolean sortByDistance,
+
+            @AuthenticationPrincipal
+            User currentUser
+
     ) {
+
         return trainingSessionService.search(
+
                 q,
                 gymId,
                 activityType,
@@ -73,7 +81,8 @@ public class TrainingSessionController {
                 latitude,
                 longitude,
                 radiusKm,
-                sortByDistance
+                sortByDistance,
+                currentUser
         );
     }
 
@@ -82,29 +91,42 @@ public class TrainingSessionController {
             summary = "Lister mes sessions créées et rejointes"
     )
     public MySessionsResponse getMySessions(
+
             @AuthenticationPrincipal
             User currentUser
+
     ) {
-        return trainingSessionService.getMySessions(
-                currentUser
-        );
+
+        return trainingSessionService
+                .getMySessions(
+                        currentUser
+                );
     }
 
     @GetMapping("/{id}")
     @Operation(
             summary = "Consulter une session d'entraînement"
     )
-    public TrainingSessionResponse getSessionById(
-            @PathVariable UUID id
+    public TrainingSessionResponse
+    getSessionById(
+
+            @PathVariable
+            UUID id
+
     ) {
-        return trainingSessionService.findById(id);
+
+        return trainingSessionService
+                .findById(
+                        id
+                );
     }
 
     @PostMapping
     @Operation(
             summary = "Créer une session d'entraînement"
     )
-    public TrainingSessionResponse createSession(
+    public TrainingSessionResponse
+    createSession(
 
             @Valid
             @RequestBody
@@ -112,24 +134,39 @@ public class TrainingSessionController {
 
             @AuthenticationPrincipal
             User currentUser
+
     ) {
-        return trainingSessionService.create(
-                request,
-                currentUser
-        );
+
+        return trainingSessionService
+                .create(
+
+                        request,
+
+                        currentUser
+                );
     }
 
     @PatchMapping("/{id}/cancel")
     @Operation(
             summary = "Annuler une session dont je suis le créateur"
     )
-    public TrainingSessionResponse cancelSession(
-            @PathVariable UUID id,
-            @AuthenticationPrincipal User currentUser
+    public TrainingSessionResponse
+    cancelSession(
+
+            @PathVariable
+            UUID id,
+
+            @AuthenticationPrincipal
+            User currentUser
+
     ) {
-        return trainingSessionService.cancelSession(
-                id,
-                currentUser
-        );
+
+        return trainingSessionService
+                .cancelSession(
+
+                        id,
+
+                        currentUser
+                );
     }
 }

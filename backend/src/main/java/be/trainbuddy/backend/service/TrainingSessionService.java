@@ -5,6 +5,7 @@ import be.trainbuddy.backend.dto.TrainingSessionRequest;
 import be.trainbuddy.backend.dto.TrainingSessionResponse;
 import be.trainbuddy.backend.entity.Gym;
 import be.trainbuddy.backend.entity.SessionParticipant;
+import be.trainbuddy.backend.entity.SubscriptionPlan;
 import be.trainbuddy.backend.entity.TrainingSession;
 import be.trainbuddy.backend.entity.User;
 import be.trainbuddy.backend.exception.BadRequestException;
@@ -21,19 +22,15 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Locale;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
 public class TrainingSessionService {
 
-    private static final double EARTH_RADIUS_KM =
+    private static final double
+            EARTH_RADIUS_KM =
             6371.0088;
 
     private final TrainingSessionRepository
@@ -48,16 +45,15 @@ public class TrainingSessionService {
     private final SessionParticipantService
             participantService;
 
+    private final SubscriptionService
+            subscriptionService;
+
     /*
-     * Liste publique des sessions.
-     *
-     * Seules les sessions UPCOMING sont exposées
-     * dans la page de recherche.
-     *
-     * Les sessions COMPLETED et CANCELLED restent
-     * disponibles dans "Mes sessions" afin de
-     * conserver l'historique personnel.
+     * =========================
+     * RECHERCHE PUBLIQUE
+     * =========================
      */
+
     @Transactional
     public List<TrainingSessionResponse> search(
 
@@ -69,32 +65,43 @@ public class TrainingSessionService {
             Double latitude,
             Double longitude,
             Double radiusKm,
-            boolean sortByDistance
+            boolean sortByDistance,
+            User currentUser
 
     ) {
 
-        validateGeolocationParameters(
+        validateSearchParameters(
+
+                q,
+
                 latitude,
+
                 longitude,
+
                 radiusKm,
-                sortByDistance
+
+                sortByDistance,
+
+                currentUser
         );
 
         List<TrainingSession> sessions =
-                trainingSessionRepository.findAll();
+                trainingSessionRepository
+                        .findAll();
 
-        /*
-         * Avant de construire la liste publique,
-         * les anciennes sessions UPCOMING dont
-         * la durée est dépassée deviennent
-         * automatiquement COMPLETED.
-         */
         sessions.forEach(
                 this::refreshStatus
         );
 
         Map<UUID, Long> participantCounts =
-                loadParticipantCounts(sessions);
+                loadParticipantCounts(
+                        sessions
+                );
+
+        Map<UUID, Boolean> premiumFlags =
+                loadPremiumFlags(
+                        sessions
+                );
 
         List<SessionWithDistance> results =
                 new ArrayList<>();
@@ -105,37 +112,34 @@ public class TrainingSessionService {
         ) {
 
             /*
-             * La page publique sert à découvrir
-             * des sessions encore exploitables.
-             *
-             * On masque donc :
-             *
-             * COMPLETED
-             * CANCELLED
-             *
-             * Elles restent accessibles dans
-             * l'historique personnel.
+             * Une session terminée ou annulée
+             * n'a aucun intérêt dans la
+             * recherche publique.
              */
             if (
-                    !"UPCOMING".equalsIgnoreCase(
-                            session.getStatus()
-                    )
+                    !"UPCOMING"
+                            .equalsIgnoreCase(
+                                    session.getStatus()
+                            )
             ) {
                 continue;
             }
 
             long participantCount =
-                    participantCounts.getOrDefault(
-                            session.getId(),
-                            0L
-                    );
+                    participantCounts
+                            .getOrDefault(
+                                    session.getId(),
+                                    0L
+                            );
 
             int availablePlaces =
                     Math.max(
+
                             session.getCapacity()
                                     - Math.toIntExact(
                                     participantCount
                             ),
+
                             0
                     );
 
@@ -151,7 +155,9 @@ public class TrainingSessionService {
             if (
                     gymId != null
                             && !gymId.equals(
-                            session.getGym().getId()
+                            session
+                                    .getGym()
+                                    .getId()
                     )
             ) {
                 continue;
@@ -179,12 +185,6 @@ public class TrainingSessionService {
                 continue;
             }
 
-            /*
-             * Si l'utilisateur coche
-             * "places disponibles uniquement",
-             * les sessions UPCOMING déjà pleines
-             * sont également masquées.
-             */
             if (
                     availableOnly
                             && availablePlaces <= 0
@@ -194,85 +194,135 @@ public class TrainingSessionService {
 
             Double distanceKm =
                     calculateDistanceKm(
+
                             latitude,
+
                             longitude,
+
                             session.getGym()
                     );
 
-            if (radiusKm != null) {
-
-                if (
-                        distanceKm == null
-                                || distanceKm > radiusKm
-                ) {
-                    continue;
-                }
+            if (
+                    radiusKm != null
+                            && (
+                            distanceKm == null
+                                    || distanceKm
+                                    > radiusKm
+                    )
+            ) {
+                continue;
             }
 
             results.add(
+
                     new SessionWithDistance(
+
                             session,
+
                             participantCount,
-                            distanceKm
+
+                            distanceKm,
+
+                            premiumFlags
+                                    .getOrDefault(
+                                            session.getId(),
+                                            false
+                                    )
                     )
             );
         }
 
-        Comparator<SessionWithDistance>
-                comparator;
-
         /*
-         * Si la géolocalisation est active :
-         * plus proche d'abord.
+         * Une session créée par un membre
+         * Premium bénéficie d'une meilleure
+         * position.
+         *
+         * Ensuite seulement viennent
+         * proximité/date.
          */
+        Comparator<SessionWithDistance>
+                premiumFirst =
+                Comparator
+                        .comparing(
+                                SessionWithDistance
+                                        ::premiumHighlighted
+                        )
+                        .reversed();
+
+        Comparator<SessionWithDistance>
+                normalOrder;
+
         if (
                 sortByDistance
                         && latitude != null
                         && longitude != null
         ) {
 
-            comparator =
+            normalOrder =
                     Comparator
                             .comparing(
-                                    SessionWithDistance::distanceKm,
-                                    Comparator.nullsLast(
-                                            Double::compareTo
-                                    )
+                                    SessionWithDistance
+                                            ::distanceKm,
+
+                                    Comparator
+                                            .nullsLast(
+                                                    Double::compareTo
+                                            )
                             )
+
                             .thenComparing(
                                     item ->
-                                            item.session()
+                                            item
+                                                    .session()
                                                     .getStartAt()
                             );
 
         } else {
 
-            /*
-             * Sans géolocalisation :
-             * prochaine session d'abord.
-             */
-            comparator =
+            normalOrder =
                     Comparator.comparing(
                             item ->
-                                    item.session()
+                                    item
+                                            .session()
                                             .getStartAt()
                     );
         }
 
-        return results.stream()
-                .sorted(comparator)
+        return results
+                .stream()
+
+                .sorted(
+                        premiumFirst
+                                .thenComparing(
+                                        normalOrder
+                                )
+                )
+
                 .map(item ->
                         toResponse(
+
                                 item.session(),
+
                                 item.participantCount(),
-                                item.distanceKm()
+
+                                item.distanceKm(),
+
+                                item.premiumHighlighted()
                         )
                 )
+
                 .toList();
     }
 
+    /*
+     * =========================
+     * DETAIL
+     * =========================
+     */
+
     @Transactional
-    public TrainingSessionResponse findById(
+    public TrainingSessionResponse
+    findById(
             UUID id
     ) {
 
@@ -285,7 +335,9 @@ public class TrainingSessionService {
                                 )
                         );
 
-        refreshStatus(session);
+        refreshStatus(
+                session
+        );
 
         long participantCount =
                 participantRepository
@@ -293,27 +345,38 @@ public class TrainingSessionService {
                                 id
                         );
 
+        boolean premium =
+                loadPremiumFlags(
+                        List.of(
+                                session
+                        )
+                )
+                        .getOrDefault(
+                                id,
+                                false
+                        );
+
         return toResponse(
+
                 session,
+
                 participantCount,
-                null
+
+                null,
+
+                premium
         );
     }
 
     /*
-     * Historique personnel.
-     *
-     * Ici on conserve volontairement :
-     *
-     * UPCOMING
-     * COMPLETED
-     * CANCELLED
-     *
-     * afin que le membre retrouve les sessions
-     * auxquelles il est personnellement lié.
+     * =========================
+     * MES SESSIONS
+     * =========================
      */
+
     @Transactional
-    public MySessionsResponse getMySessions(
+    public MySessionsResponse
+    getMySessions(
             User currentUser
     ) {
 
@@ -325,10 +388,14 @@ public class TrainingSessionService {
                         );
 
         List<TrainingSession> sessions =
-                participations.stream()
+                participations
+                        .stream()
+
                         .map(
-                                SessionParticipant::getSession
+                                SessionParticipant
+                                        ::getSession
                         )
+
                         .toList();
 
         sessions.forEach(
@@ -336,17 +403,30 @@ public class TrainingSessionService {
         );
 
         Map<UUID, Long> participantCounts =
-                loadParticipantCounts(sessions);
+                loadParticipantCounts(
+                        sessions
+                );
+
+        Map<UUID, Boolean> premiumFlags =
+                loadPremiumFlags(
+                        sessions
+                );
 
         List<TrainingSessionResponse>
                 created =
-                participations.stream()
+                participations
+                        .stream()
+
                         .filter(
-                                SessionParticipant::isCreator
+                                SessionParticipant
+                                        ::isCreator
                         )
+
                         .map(participant ->
                                 toResponse(
-                                        participant.getSession(),
+
+                                        participant
+                                                .getSession(),
 
                                         participantCounts
                                                 .getOrDefault(
@@ -356,21 +436,34 @@ public class TrainingSessionService {
                                                         0L
                                                 ),
 
-                                        null
+                                        null,
+
+                                        premiumFlags
+                                                .getOrDefault(
+                                                        participant
+                                                                .getSession()
+                                                                .getId(),
+                                                        false
+                                                )
                                 )
                         )
+
                         .toList();
 
         List<TrainingSessionResponse>
                 joined =
-                participations.stream()
-                        .filter(
-                                participant ->
-                                        !participant.isCreator()
+                participations
+                        .stream()
+
+                        .filter(participant ->
+                                !participant.isCreator()
                         )
+
                         .map(participant ->
                                 toResponse(
-                                        participant.getSession(),
+
+                                        participant
+                                                .getSession(),
 
                                         participantCounts
                                                 .getOrDefault(
@@ -380,24 +473,57 @@ public class TrainingSessionService {
                                                         0L
                                                 ),
 
-                                        null
+                                        null,
+
+                                        premiumFlags
+                                                .getOrDefault(
+                                                        participant
+                                                                .getSession()
+                                                                .getId(),
+                                                        false
+                                                )
                                 )
                         )
+
                         .toList();
 
         return new MySessionsResponse(
+
                 created,
+
                 joined
         );
     }
+
+    /*
+     * =========================
+     * CREATION + LIMITES PREMIUM
+     * =========================
+     */
 
     @Transactional
     public TrainingSessionResponse create(
 
             TrainingSessionRequest request,
+
             User currentUser
 
     ) {
+
+        SubscriptionPlan plan =
+                subscriptionService
+                        .getEffectivePlan(
+                                currentUser
+                        );
+
+        validateCreationLimits(
+
+                request,
+
+                currentUser,
+
+                plan
+        );
 
         Gym gym =
                 gymRepository
@@ -410,10 +536,19 @@ public class TrainingSessionService {
                                 )
                         );
 
+        if (!gym.isActive()) {
+
+            throw new BadRequestException(
+                    "Cette salle n'est actuellement pas disponible"
+            );
+        }
+
         TrainingSession session =
                 TrainingSession.builder()
 
-                        .gym(gym)
+                        .gym(
+                                gym
+                        )
 
                         .title(
                                 request.title()
@@ -455,44 +590,67 @@ public class TrainingSessionService {
 
         TrainingSession savedSession =
                 trainingSessionRepository
-                        .save(session);
+                        .save(
+                                session
+                        );
 
-        participantService.registerCreator(
-                savedSession,
-                currentUser
-        );
+        participantService
+                .registerCreator(
+
+                        savedSession,
+
+                        currentUser
+                );
 
         return toResponse(
+
                 savedSession,
+
                 1,
-                null
+
+                null,
+
+                plan.isHighlightedSessions()
         );
     }
 
     /*
-     * Annulation par le créateur uniquement.
+     * =========================
+     * ANNULATION
+     * =========================
      */
+
     @Transactional
-    public TrainingSessionResponse cancelSession(
+    public TrainingSessionResponse
+    cancelSession(
+
             UUID sessionId,
+
             User currentUser
+
     ) {
 
         TrainingSession session =
                 trainingSessionRepository
-                        .findById(sessionId)
+                        .findById(
+                                sessionId
+                        )
                         .orElseThrow(() ->
                                 new ResourceNotFoundException(
                                         "Session introuvable"
                                 )
                         );
 
-        refreshStatus(session);
+        refreshStatus(
+                session
+        );
 
         boolean creator =
                 participantRepository
                         .existsBySessionIdAndUserIdAndCreatorTrueAndLeftAtIsNull(
+
                                 sessionId,
+
                                 currentUser.getId()
                         );
 
@@ -504,9 +662,10 @@ public class TrainingSessionService {
         }
 
         if (
-                "CANCELLED".equalsIgnoreCase(
-                        session.getStatus()
-                )
+                "CANCELLED"
+                        .equalsIgnoreCase(
+                                session.getStatus()
+                        )
         ) {
 
             throw new ConflictException(
@@ -515,9 +674,10 @@ public class TrainingSessionService {
         }
 
         if (
-                "COMPLETED".equalsIgnoreCase(
-                        session.getStatus()
-                )
+                "COMPLETED"
+                        .equalsIgnoreCase(
+                                session.getStatus()
+                        )
         ) {
 
             throw new BadRequestException(
@@ -529,7 +689,9 @@ public class TrainingSessionService {
                 "CANCELLED"
         );
 
-        trainingSessionRepository.save(session);
+        trainingSessionRepository.save(
+                session
+        );
 
         long participantCount =
                 participantRepository
@@ -537,33 +699,391 @@ public class TrainingSessionService {
                                 sessionId
                         );
 
+        boolean premium =
+                loadPremiumFlags(
+                        List.of(
+                                session
+                        )
+                )
+                        .getOrDefault(
+                                sessionId,
+                                false
+                        );
+
         return toResponse(
+
                 session,
+
                 participantCount,
-                null
+
+                null,
+
+                premium
         );
     }
 
     /*
-     * Une session UPCOMING devient automatiquement
-     * COMPLETED lorsque son heure de fin est passée.
+     * =========================
+     * REGLES PREMIUM
+     * =========================
      */
+
+    private void validateCreationLimits(
+
+            TrainingSessionRequest request,
+
+            User currentUser,
+
+            SubscriptionPlan plan
+
+    ) {
+
+        if (
+                request.startAt()
+                        .isBefore(
+                                LocalDateTime.now()
+                        )
+        ) {
+
+            throw new BadRequestException(
+                    "La session doit être planifiée dans le futur"
+            );
+        }
+
+        if (
+                request.capacity()
+                        > plan.getMaxCapacity()
+        ) {
+
+            throw new BadRequestException(
+
+                    "Votre plan "
+                            + plan.getCode()
+                            + " autorise une capacité maximale de "
+                            + plan.getMaxCapacity()
+                            + " participants"
+            );
+        }
+
+        List<SessionParticipant>
+                participations =
+                participantRepository
+                        .findActiveByUserIdWithSession(
+                                currentUser.getId()
+                        );
+
+        participations.forEach(
+                participant ->
+                        refreshStatus(
+                                participant
+                                        .getSession()
+                        )
+        );
+
+        long activeCreatedSessions =
+                participations
+                        .stream()
+
+                        .filter(
+                                SessionParticipant
+                                        ::isCreator
+                        )
+
+                        .filter(participant ->
+                                "UPCOMING"
+                                        .equalsIgnoreCase(
+                                                participant
+                                                        .getSession()
+                                                        .getStatus()
+                                        )
+                        )
+
+                        .count();
+
+        if (
+                activeCreatedSessions
+                        >= plan
+                        .getMaxActiveSessions()
+        ) {
+
+            throw new BadRequestException(
+
+                    "Votre plan "
+                            + plan.getCode()
+                            + " autorise au maximum "
+                            + plan.getMaxActiveSessions()
+                            + " sessions actives créées simultanément"
+            );
+        }
+    }
+
+    private void validateSearchParameters(
+
+            String q,
+
+            Double latitude,
+
+            Double longitude,
+
+            Double radiusKm,
+
+            boolean sortByDistance,
+
+            User currentUser
+
+    ) {
+
+        if (
+                (latitude == null)
+                        != (longitude == null)
+        ) {
+
+            throw new BadRequestException(
+                    "La latitude et la longitude doivent être fournies ensemble"
+            );
+        }
+
+        if (
+                latitude != null
+                        && (
+                        latitude < -90
+                                || latitude > 90
+                )
+        ) {
+
+            throw new BadRequestException(
+                    "La latitude doit être comprise entre -90 et 90"
+            );
+        }
+
+        if (
+                longitude != null
+                        && (
+                        longitude < -180
+                                || longitude > 180
+                )
+        ) {
+
+            throw new BadRequestException(
+                    "La longitude doit être comprise entre -180 et 180"
+            );
+        }
+
+        if (
+                radiusKm != null
+                        && (
+                        latitude == null
+                                || longitude == null
+                )
+        ) {
+
+            throw new BadRequestException(
+                    "Une position est nécessaire pour filtrer par rayon"
+            );
+        }
+
+        if (
+                sortByDistance
+                        && (
+                        latitude == null
+                                || longitude == null
+                )
+        ) {
+
+            throw new BadRequestException(
+                    "Une position est nécessaire pour trier par distance"
+            );
+        }
+
+        SubscriptionPlan plan =
+                subscriptionService
+                        .getEffectivePlan(
+                                currentUser
+                        );
+
+        double maximumRadius =
+                plan.isAdvancedFilters()
+                        ? 200
+                        : 25;
+
+        if (
+                radiusKm != null
+                        && (
+                        radiusKm <= 0
+                                || radiusKm
+                                > maximumRadius
+                )
+        ) {
+
+            if (
+                    !plan.isAdvancedFilters()
+                            && radiusKm > 25
+            ) {
+
+                throw new BadRequestException(
+                        "Les rayons supérieurs à 25 km sont réservés aux membres Premium"
+                );
+            }
+
+            throw new BadRequestException(
+                    "Le rayon doit être supérieur à 0 et inférieur ou égal à "
+                            + (int) maximumRadius
+                            + " km"
+            );
+        }
+
+        if (
+                containsExclusionTerm(
+                        q
+                )
+                        && !plan
+                        .isAdvancedFilters()
+        ) {
+
+            throw new BadRequestException(
+                    "La recherche avancée avec -mot est réservée aux membres Premium"
+            );
+        }
+    }
+
+    private boolean containsExclusionTerm(
+            String q
+    ) {
+
+        if (
+                q == null
+                        || q.isBlank()
+        ) {
+            return false;
+        }
+
+        return Arrays
+                .stream(
+                        q.trim()
+                                .split(
+                                        "\\s+"
+                                )
+                )
+
+                .anyMatch(term ->
+                        term.startsWith("-")
+                                && term.length()
+                                > 1
+                );
+    }
+
+    /*
+     * =========================
+     * PREMIUM DES CREATEURS
+     * =========================
+     */
+
+    private Map<UUID, Boolean>
+    loadPremiumFlags(
+            List<TrainingSession> sessions
+    ) {
+
+        if (
+                sessions == null
+                        || sessions.isEmpty()
+        ) {
+            return Map.of();
+        }
+
+        List<UUID> sessionIds =
+                sessions
+                        .stream()
+
+                        .map(
+                                TrainingSession
+                                        ::getId
+                        )
+
+                        .distinct()
+
+                        .toList();
+
+        List<SessionParticipant>
+                creators =
+                participantRepository
+                        .findCreatorsBySessionIds(
+                                sessionIds
+                        );
+
+        if (creators.isEmpty()) {
+            return Map.of();
+        }
+
+        Set<UUID> creatorUserIds =
+                creators
+                        .stream()
+
+                        .map(participant ->
+                                participant
+                                        .getUser()
+                                        .getId()
+                        )
+
+                        .collect(
+                                Collectors.toSet()
+                        );
+
+        Set<UUID> premiumUserIds =
+                subscriptionService
+                        .findPremiumUserIds(
+                                creatorUserIds
+                        );
+
+        Map<UUID, Boolean> result =
+                new HashMap<>();
+
+        for (
+                SessionParticipant creator :
+                creators
+        ) {
+
+            result.put(
+
+                    creator
+                            .getSession()
+                            .getId(),
+
+                    premiumUserIds.contains(
+                            creator
+                                    .getUser()
+                                    .getId()
+                    )
+            );
+        }
+
+        return result;
+    }
+
+    /*
+     * =========================
+     * STATUTS
+     * =========================
+     */
+
     private void refreshStatus(
             TrainingSession session
     ) {
 
         if (
-                !"UPCOMING".equalsIgnoreCase(
-                        session.getStatus()
-                )
+                !"UPCOMING"
+                        .equalsIgnoreCase(
+                                session.getStatus()
+                        )
         ) {
             return;
         }
 
         LocalDateTime endAt =
-                session.getStartAt()
+                session
+                        .getStartAt()
                         .plusMinutes(
-                                session.getDurationMin()
+                                session
+                                        .getDurationMin()
                         );
 
         if (
@@ -578,52 +1098,66 @@ public class TrainingSessionService {
         }
     }
 
+    /*
+     * =========================
+     * PARTICIPANTS
+     * =========================
+     */
+
     private Map<UUID, Long>
     loadParticipantCounts(
             List<TrainingSession> sessions
     ) {
 
-        if (sessions.isEmpty()) {
+        if (
+                sessions == null
+                        || sessions.isEmpty()
+        ) {
             return Map.of();
         }
 
         List<UUID> ids =
-                sessions.stream()
+                sessions
+                        .stream()
+
                         .map(
-                                TrainingSession::getId
+                                TrainingSession
+                                        ::getId
                         )
+
                         .distinct()
+
                         .toList();
 
         Map<UUID, Long> counts =
                 new HashMap<>();
 
-        List<Object[]> rows =
-                participantRepository
-                        .countParticipantsBySessionIds(
-                                ids
-                        );
+        participantRepository
+                .countParticipantsBySessionIds(
+                        ids
+                )
+                .forEach(row ->
+                        counts.put(
 
-        for (Object[] row : rows) {
+                                (UUID) row[0],
 
-            UUID sessionId =
-                    (UUID) row[0];
-
-            Long count =
-                    (Long) row[1];
-
-            counts.put(
-                    sessionId,
-                    count
-            );
-        }
+                                (Long) row[1]
+                        )
+                );
 
         return counts;
     }
 
+    /*
+     * =========================
+     * RECHERCHE TEXTE
+     * =========================
+     */
+
     private boolean matchesTextQuery(
 
             TrainingSession session,
+
             String query
 
     ) {
@@ -637,25 +1171,36 @@ public class TrainingSessionService {
 
         String searchableText =
                 String.join(
+
                                 " ",
+
                                 safe(
                                         session.getTitle()
                                 ),
+
                                 safe(
-                                        session.getActivityType()
+                                        session
+                                                .getActivityType()
                                 ),
+
                                 safe(
-                                        session.getDescription()
+                                        session
+                                                .getDescription()
                                 ),
+
                                 safe(
-                                        session.getGym()
+                                        session
+                                                .getGym()
                                                 .getName()
                                 ),
+
                                 safe(
-                                        session.getGym()
+                                        session
+                                                .getGym()
                                                 .getAddress()
                                 )
                         )
+
                         .toLowerCase(
                                 Locale.ROOT
                         );
@@ -663,12 +1208,19 @@ public class TrainingSessionService {
         String[] terms =
                 query
                         .trim()
+
                         .toLowerCase(
                                 Locale.ROOT
                         )
-                        .split("\\s+");
 
-        for (String term : terms) {
+                        .split(
+                                "\\s+"
+                        );
+
+        for (
+                String term :
+                terms
+        ) {
 
             if (term.isBlank()) {
                 continue;
@@ -683,9 +1235,10 @@ public class TrainingSessionService {
                         term.substring(1);
 
                 if (
-                        searchableText.contains(
-                                excluded
-                        )
+                        searchableText
+                                .contains(
+                                        excluded
+                                )
                 ) {
                     return false;
                 }
@@ -693,9 +1246,10 @@ public class TrainingSessionService {
             } else {
 
                 if (
-                        !searchableText.contains(
-                                term
-                        )
+                        !searchableText
+                                .contains(
+                                        term
+                                )
                 ) {
                     return false;
                 }
@@ -705,10 +1259,18 @@ public class TrainingSessionService {
         return true;
     }
 
+    /*
+     * =========================
+     * DISTANCE
+     * =========================
+     */
+
     private Double calculateDistanceKm(
 
             Double userLatitude,
+
             Double userLongitude,
+
             Gym gym
 
     ) {
@@ -796,105 +1358,36 @@ public class TrainingSessionService {
         ) / 100.0;
     }
 
-    private void validateGeolocationParameters(
+    /*
+     * =========================
+     * DTO
+     * =========================
+     */
 
-            Double latitude,
-            Double longitude,
-            Double radiusKm,
-            boolean sortByDistance
-
-    ) {
-
-        if (
-                (latitude == null)
-                        != (longitude == null)
-        ) {
-
-            throw new BadRequestException(
-                    "La latitude et la longitude doivent être fournies ensemble"
-            );
-        }
-
-        if (
-                latitude != null
-                        && (
-                        latitude < -90
-                                || latitude > 90
-                )
-        ) {
-
-            throw new BadRequestException(
-                    "La latitude doit être comprise entre -90 et 90"
-            );
-        }
-
-        if (
-                longitude != null
-                        && (
-                        longitude < -180
-                                || longitude > 180
-                )
-        ) {
-
-            throw new BadRequestException(
-                    "La longitude doit être comprise entre -180 et 180"
-            );
-        }
-
-        if (radiusKm != null) {
-
-            if (
-                    latitude == null
-                            || longitude == null
-            ) {
-
-                throw new BadRequestException(
-                        "Une position est nécessaire pour filtrer par rayon"
-                );
-            }
-
-            if (
-                    radiusKm <= 0
-                            || radiusKm > 200
-            ) {
-
-                throw new BadRequestException(
-                        "Le rayon doit être supérieur à 0 et inférieur ou égal à 200 km"
-                );
-            }
-        }
-
-        if (
-                sortByDistance
-                        && (
-                        latitude == null
-                                || longitude == null
-                )
-        ) {
-
-            throw new BadRequestException(
-                    "Une position est nécessaire pour trier par distance"
-            );
-        }
-    }
-
-    private TrainingSessionResponse toResponse(
+    private TrainingSessionResponse
+    toResponse(
 
             TrainingSession session,
+
             long participantCount,
-            Double distanceKm
+
+            Double distanceKm,
+
+            boolean premiumHighlighted
 
     ) {
 
-        int participantCountValue =
+        int count =
                 Math.toIntExact(
                         participantCount
                 );
 
         int availablePlaces =
                 Math.max(
+
                         session.getCapacity()
-                                - participantCountValue,
+                                - count,
+
                         0
                 );
 
@@ -918,17 +1411,21 @@ public class TrainingSessionService {
 
                 session.getVisibility(),
 
-                session.getGym()
+                session
+                        .getGym()
                         .getId(),
 
-                session.getGym()
+                session
+                        .getGym()
                         .getName(),
 
-                participantCountValue,
+                count,
 
                 availablePlaces,
 
-                distanceKm
+                distanceKm,
+
+                premiumHighlighted
         );
     }
 
@@ -947,7 +1444,9 @@ public class TrainingSessionService {
 
             long participantCount,
 
-            Double distanceKm
+            Double distanceKm,
+
+            boolean premiumHighlighted
 
     ) {
     }

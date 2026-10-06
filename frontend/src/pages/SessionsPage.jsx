@@ -1,5 +1,10 @@
-import { useEffect, useState } from "react";
+import {
+  useEffect,
+  useState,
+} from "react";
+
 import api from "../api/axios";
+import ReportPanel from "../components/ReportPanel";
 
 const DEFAULT_FILTERS = {
   q: "",
@@ -8,6 +13,15 @@ const DEFAULT_FILTERS = {
   date: "",
   availableOnly: false,
   radiusKm: "10",
+};
+
+const STANDARD_SUBSCRIPTION = {
+  premium: false,
+  maxCapacity: 5,
+  maxActiveSessions: 2,
+  activeCreatedSessions: 0,
+  advancedFilters: false,
+  highlightedSessions: false,
 };
 
 const ACTIVITIES = [
@@ -20,14 +34,28 @@ const ACTIVITIES = [
 ];
 
 export default function SessionsPage() {
-  const [sessions, setSessions] = useState([]);
-  const [gyms, setGyms] = useState([]);
-
-  const [selectedSession, setSelectedSession] =
-    useState(null);
-
-  const [participants, setParticipants] =
+  const [sessions, setSessions] =
     useState([]);
+
+  const [gyms, setGyms] =
+    useState([]);
+
+  const [
+    subscription,
+    setSubscription,
+  ] = useState(
+    STANDARD_SUBSCRIPTION
+  );
+
+  const [
+    selectedSession,
+    setSelectedSession,
+  ] = useState(null);
+
+  const [
+    participants,
+    setParticipants,
+  ] = useState([]);
 
   const [messages, setMessages] =
     useState([]);
@@ -38,133 +66,223 @@ export default function SessionsPage() {
   const [message, setMessage] =
     useState("");
 
-  const [showCreateForm, setShowCreateForm] =
-    useState(false);
+  const [
+    showCreateForm,
+    setShowCreateForm,
+  ] = useState(false);
 
-  const [isParticipant, setIsParticipant] =
-    useState(false);
+  const [
+    isParticipant,
+    setIsParticipant,
+  ] = useState(false);
+
+  const [
+    myParticipantId,
+    setMyParticipantId,
+  ] = useState(null);
+
+  const [
+    myParticipantCreator,
+    setMyParticipantCreator,
+  ] = useState(false);
+
+  const [
+    reportTarget,
+    setReportTarget,
+  ] = useState(null);
 
   const [filters, setFilters] =
     useState(DEFAULT_FILTERS);
 
-  const [userLocation, setUserLocation] =
-    useState(null);
+  const [
+    userLocation,
+    setUserLocation,
+  ] = useState(null);
 
-  const [locationLoading, setLocationLoading] =
-    useState(false);
+  const [
+    locationLoading,
+    setLocationLoading,
+  ] = useState(false);
 
-  const [searchLoading, setSearchLoading] =
-    useState(false);
+  const [
+    searchLoading,
+    setSearchLoading,
+  ] = useState(false);
 
-  const [newSession, setNewSession] =
-    useState({
-      gymId: "",
-      title: "",
-      activityType: "Musculation",
-      description: "",
-      startAt: "",
-      durationMin: 60,
-      capacity: 4,
-      visibility: "PUBLIC",
-    });
+  const [
+    newSession,
+    setNewSession,
+  ] = useState({
+    gymId: "",
+    title: "",
+    activityType:
+      "Musculation",
+    description: "",
+    startAt: "",
+    durationMin: 60,
+    capacity: 4,
+    visibility: "PUBLIC",
+  });
 
-  const fetchSessions = async (
-    filtersToUse = filters,
-    locationToUse = userLocation
-  ) => {
-    setSearchLoading(true);
+  const activeCreatedSessions =
+    Number(
+      subscription
+        .activeCreatedSessions ??
+        0
+    );
 
-    try {
-      const params = {};
+  const maxActiveSessions =
+    Number(
+      subscription
+        .maxActiveSessions ??
+        2
+    );
 
-      if (filtersToUse.q.trim()) {
-        params.q =
-          filtersToUse.q.trim();
-      }
+  const sessionLimitReached =
+    activeCreatedSessions >=
+    maxActiveSessions;
 
-      if (filtersToUse.gymId) {
-        params.gymId =
-          filtersToUse.gymId;
-      }
-
-      if (filtersToUse.activityType) {
-        params.activityType =
-          filtersToUse.activityType;
-      }
-
-      if (filtersToUse.date) {
-        params.date =
-          filtersToUse.date;
-      }
-
-      if (filtersToUse.availableOnly) {
-        params.availableOnly = true;
-      }
-
-      if (locationToUse) {
-        params.latitude =
-          locationToUse.latitude;
-
-        params.longitude =
-          locationToUse.longitude;
-
-        params.radiusKm =
-          Number(
-            filtersToUse.radiusKm
+  const fetchSubscription =
+    async () => {
+      try {
+        const response =
+          await api.get(
+            "/subscriptions/me"
           );
 
-        params.sortByDistance = true;
-      }
-
-      const res =
-        await api.get(
-          "/sessions",
-          {
-            params,
-          }
+        setSubscription(
+          response.data
         );
-
-      setSessions(res.data);
-    } catch (err) {
-      setMessage(
-        err.response?.data?.message ||
-          "Impossible de charger les sessions."
-      );
-
-      console.error(err);
-    } finally {
-      setSearchLoading(false);
-    }
-  };
-
-  const fetchGyms = async () => {
-    try {
-      const res =
-        await api.get(
-          "/gyms"
-        );
-
-      setGyms(res.data);
-
-      if (res.data.length > 0) {
-        setNewSession(
-          (prev) => ({
-            ...prev,
-
-            gymId:
-              prev.gymId ||
-              res.data[0].id,
-          })
+      } catch (error) {
+        console.error(
+          error
         );
       }
-    } catch (err) {
-      setMessage(
-        "Impossible de charger les salles."
+    };
+
+  const fetchSessions =
+    async (
+      filtersToUse = filters,
+      locationToUse = userLocation
+    ) => {
+      setSearchLoading(
+        true
       );
 
-      console.error(err);
-    }
-  };
+      try {
+        const params = {};
+
+        if (
+          filtersToUse.q.trim()
+        ) {
+          params.q =
+            filtersToUse.q.trim();
+        }
+
+        if (
+          filtersToUse.gymId
+        ) {
+          params.gymId =
+            filtersToUse.gymId;
+        }
+
+        if (
+          filtersToUse.activityType
+        ) {
+          params.activityType =
+            filtersToUse.activityType;
+        }
+
+        if (
+          filtersToUse.date
+        ) {
+          params.date =
+            filtersToUse.date;
+        }
+
+        if (
+          filtersToUse.availableOnly
+        ) {
+          params.availableOnly =
+            true;
+        }
+
+        if (locationToUse) {
+          params.latitude =
+            locationToUse.latitude;
+
+          params.longitude =
+            locationToUse.longitude;
+
+          params.radiusKm =
+            Number(
+              filtersToUse.radiusKm
+            );
+
+          params.sortByDistance =
+            true;
+        }
+
+        const res =
+          await api.get(
+            "/sessions",
+            {
+              params,
+            }
+          );
+
+        setSessions(
+          res.data
+        );
+      } catch (err) {
+        setMessage(
+          err.response?.data
+            ?.message ||
+            "Impossible de charger les sessions."
+        );
+
+        console.error(err);
+      } finally {
+        setSearchLoading(
+          false
+        );
+      }
+    };
+
+  const fetchGyms =
+    async () => {
+      try {
+        const res =
+          await api.get(
+            "/gyms"
+          );
+
+        setGyms(
+          res.data
+        );
+
+        if (
+          res.data.length >
+          0
+        ) {
+          setNewSession(
+            (prev) => ({
+              ...prev,
+
+              gymId:
+                prev.gymId ||
+                res.data[0].id,
+            })
+          );
+        }
+      } catch (err) {
+        setMessage(
+          "Impossible de charger les salles."
+        );
+
+        console.error(err);
+      }
+    };
 
   const fetchParticipants =
     async (id) => {
@@ -197,12 +315,24 @@ export default function SessionsPage() {
           `/sessions/${id}/membership`
         );
 
+      const participating =
+        res.data.participating;
+
       setIsParticipant(
-        res.data.participating
+        participating
       );
 
-      return res.data
-        .participating;
+      setMyParticipantId(
+        res.data.participant
+          ?.id ?? null
+      );
+
+      setMyParticipantCreator(
+        res.data.participant
+          ?.creator ?? false
+      );
+
+      return participating;
     };
 
   const openSession =
@@ -212,17 +342,18 @@ export default function SessionsPage() {
       );
 
       setMessage("");
-
       setMessages([]);
-
       setParticipants([]);
-
-      setIsParticipant(
-        false
-      );
+      setIsParticipant(false);
+      setMyParticipantId(null);
+      setMyParticipantCreator(false);
+      setReportTarget(null);
 
       try {
-        const [, participating] =
+        const [
+          ,
+          participating,
+        ] =
           await Promise.all([
             fetchParticipants(
               session.id
@@ -256,12 +387,23 @@ export default function SessionsPage() {
       }
 
       try {
-        await api.post(
-          `/sessions/${selectedSession.id}/join`
-        );
+        const response =
+          await api.post(
+            `/sessions/${selectedSession.id}/join`
+          );
 
         setIsParticipant(
           true
+        );
+
+        setMyParticipantId(
+          response.data.id
+        );
+
+        setMyParticipantCreator(
+          Boolean(
+            response.data.creator
+          )
         );
 
         setMessage(
@@ -344,8 +486,8 @@ export default function SessionsPage() {
     };
 
   const sendMessage =
-    async (e) => {
-      e.preventDefault();
+    async (event) => {
+      event.preventDefault();
 
       if (
         !selectedSession ||
@@ -380,8 +522,25 @@ export default function SessionsPage() {
     };
 
   const createSession =
-    async (e) => {
-      e.preventDefault();
+    async (event) => {
+      event.preventDefault();
+
+      /*
+       * Blocage UX.
+       *
+       * Le backend vérifie toujours lui-même
+       * la limite : ceci n'est qu'un confort
+       * supplémentaire pour le membre.
+       */
+      if (sessionLimitReached) {
+        setMessage(
+          subscription.premium
+            ? `Vous avez déjà atteint la limite Premium de ${maxActiveSessions} sessions actives.`
+            : "Vous avez déjà atteint votre limite Standard de 2 sessions actives. Passez Premium pour en créer jusqu'à 10."
+        );
+
+        return;
+      }
 
       try {
         await api.post(
@@ -391,7 +550,8 @@ export default function SessionsPage() {
 
             durationMin:
               Number(
-                newSession.durationMin
+                newSession
+                  .durationMin
               ),
 
             capacity:
@@ -425,13 +585,31 @@ export default function SessionsPage() {
 
           durationMin: 60,
 
-          capacity: 4,
+          capacity: Math.min(
+            4,
+            subscription.maxCapacity ||
+              5
+          ),
 
           visibility:
             "PUBLIC",
         });
 
-        await fetchSessions();
+        /*
+         * Très important :
+         * après création, on recharge
+         * également l'abonnement pour
+         * faire évoluer immédiatement :
+         *
+         * 0/2 → 1/2
+         * 1/2 → 2/2
+         * 4/10 → 5/10
+         */
+        await Promise.all([
+          fetchSessions(),
+          fetchSubscription(),
+        ]);
+
       } catch (err) {
         setMessage(
           err.response?.data
@@ -440,12 +618,20 @@ export default function SessionsPage() {
         );
 
         console.error(err);
+
+        /*
+         * Si le backend nous a refusé
+         * parce que l'état local était
+         * légèrement en retard, on
+         * resynchronise le compteur.
+         */
+        await fetchSubscription();
       }
     };
 
   const searchSessions =
-    async (e) => {
-      e.preventDefault();
+    async (event) => {
+      event.preventDefault();
 
       setMessage("");
 
@@ -474,92 +660,83 @@ export default function SessionsPage() {
       );
     };
 
-  const useMyLocation = () => {
-    if (
-      !navigator.geolocation
-    ) {
-      setMessage(
-        "La géolocalisation n'est pas disponible dans ce navigateur. La recherche classique reste utilisable."
+  const useMyLocation =
+    () => {
+      if (
+        !navigator.geolocation
+      ) {
+        setMessage(
+          "La géolocalisation n'est pas disponible dans ce navigateur."
+        );
+
+        return;
+      }
+
+      setLocationLoading(
+        true
       );
 
-      return;
-    }
+      setMessage("");
 
-    setLocationLoading(
-      true
-    );
+      navigator.geolocation
+        .getCurrentPosition(
+          async (
+            position
+          ) => {
+            const location = {
+              latitude:
+                position.coords
+                  .latitude,
 
-    setMessage("");
+              longitude:
+                position.coords
+                  .longitude,
+            };
 
-    navigator.geolocation
-      .getCurrentPosition(
-        async (
-          position
-        ) => {
-          const location = {
-            latitude:
-              position.coords
-                .latitude,
-
-            longitude:
-              position.coords
-                .longitude,
-          };
-
-          setUserLocation(
-            location
-          );
-
-          setLocationLoading(
-            false
-          );
-
-          setMessage(
-            "Position détectée. Les sessions sont maintenant filtrées et triées par proximité."
-          );
-
-          await fetchSessions(
-            filters,
-            location
-          );
-        },
-
-        (error) => {
-          setLocationLoading(
-            false
-          );
-
-          setUserLocation(
-            null
-          );
-
-          if (
-            error.code ===
-            error.PERMISSION_DENIED
-          ) {
-            setMessage(
-              "Vous avez refusé la géolocalisation. Aucun problème : la recherche par salle, activité et date reste disponible."
+            setUserLocation(
+              location
             );
-          } else {
+
+            setLocationLoading(
+              false
+            );
+
+            await fetchSessions(
+              filters,
+              location
+            );
+          },
+
+          () => {
+            setLocationLoading(
+              false
+            );
+
+            setUserLocation(
+              null
+            );
+
             setMessage(
               "Impossible de récupérer votre position. La recherche classique reste disponible."
             );
+          },
+
+          {
+            enableHighAccuracy:
+              false,
+
+            timeout:
+              10000,
+
+            maximumAge:
+              300000,
           }
-        },
-
-        {
-          enableHighAccuracy:
-            false,
-
-          timeout: 10000,
-
-          maximumAge:
-            300000,
-        }
-      );
-  };
+        );
+    };
 
   useEffect(() => {
+    fetchSubscription();
+
     fetchSessions(
       DEFAULT_FILTERS,
       null
@@ -584,12 +761,22 @@ export default function SessionsPage() {
                 []
               );
 
-              setMessages(
-                []
-              );
+              setMessages([]);
 
               setIsParticipant(
                 false
+              );
+
+              setMyParticipantId(
+                null
+              );
+
+              setMyParticipantCreator(
+                false
+              );
+
+              setReportTarget(
+                null
               );
 
               setMessage("");
@@ -614,15 +801,13 @@ export default function SessionsPage() {
                 }
               </span>
 
-              <span className="capacity">
-                {
-                  selectedSession
-                    .availablePlaces ??
-                  selectedSession
-                    .capacity
-                }{" "}
-                place(s) disponible(s)
-              </span>
+              {selectedSession
+                .premiumHighlighted && (
+
+                <span className="capacity">
+                  ⭐ SESSION PREMIUM
+                </span>
+              )}
 
             </div>
 
@@ -633,10 +818,8 @@ export default function SessionsPage() {
             </h2>
 
             <p>
-              {
-                selectedSession.description ||
-                "Aucune description disponible."
-              }
+              {selectedSession.description ||
+                "Aucune description disponible."}
             </p>
 
             <div className="session-detail-info">
@@ -658,6 +841,7 @@ export default function SessionsPage() {
               {selectedSession
                 .distanceKm !=
                 null && (
+
                 <span>
                   🧭 Distance :{" "}
                   {formatDistance(
@@ -705,40 +889,94 @@ export default function SessionsPage() {
 
             </div>
 
-            {!isParticipant && (
-              <button
-                className="primary-btn"
-                onClick={
-                  joinSession
-                }
-                disabled={
-                  (
+            <div className="card-actions">
+
+              {!isParticipant && (
+
+                <button
+                  className="primary-btn"
+                  onClick={
+                    joinSession
+                  }
+                  disabled={
+                    (
+                      selectedSession
+                        .availablePlaces ??
+                      1
+                    ) <= 0
+                  }
+                >
+                  {(
                     selectedSession
                       .availablePlaces ??
                     1
                   ) <= 0
-                }
-              >
-                {(
-                  selectedSession
-                    .availablePlaces ??
-                  1
-                ) <= 0
-                  ? "Session complète"
-                  : "Rejoindre la session"}
-              </button>
-            )}
+                    ? "Session complète"
+                    : "Rejoindre la session"}
+                </button>
+              )}
 
-            {isParticipant && (
-              <button
-                className="success-btn"
-                disabled
-              >
-                Session rejointe
-              </button>
-            )}
+              {isParticipant && (
+
+                <button
+                  className="success-btn"
+                  disabled
+                >
+                  Session rejointe
+                </button>
+              )}
+
+              {!myParticipantCreator && (
+
+                <button
+                  className="secondary-btn"
+                  style={{
+                    color:
+                      "#dc2626",
+
+                    background:
+                      "#fef2f2",
+                  }}
+                  onClick={() =>
+                    setReportTarget({
+                      type:
+                        "SESSION",
+
+                      id:
+                        selectedSession.id,
+
+                      label:
+                        `la session "${selectedSession.title}"`,
+                    })
+                  }
+                >
+                  Signaler cette session
+                </button>
+              )}
+
+            </div>
 
           </section>
+
+          <ReportPanel
+            target={
+              reportTarget
+            }
+            onCancel={() =>
+              setReportTarget(
+                null
+              )
+            }
+            onSuccess={() => {
+              setReportTarget(
+                null
+              );
+
+              setMessage(
+                "Signalement envoyé."
+              );
+            }}
+          />
 
           <section className="session-detail-layout">
 
@@ -750,22 +988,27 @@ export default function SessionsPage() {
 
               {participants.length ===
               0 ? (
+
                 <p className="empty-text">
-                  Aucun participant pour le moment.
+                  Aucun participant.
                 </p>
+
               ) : (
+
                 <div className="participants-list">
 
                   {participants.map(
                     (
                       participant
                     ) => (
+
                       <div
                         className="participant-item"
                         key={
                           participant.id
                         }
                       >
+
                         <div>
 
                           <strong>
@@ -783,13 +1026,59 @@ export default function SessionsPage() {
 
                         </div>
 
-                        <span>
-                          {
-                            participant.creator
+                        <div
+                          style={{
+                            display:
+                              "flex",
+
+                            alignItems:
+                              "center",
+
+                            gap:
+                              "8px",
+                          }}
+                        >
+
+                          <span>
+                            {participant.creator
                               ? "Créateur"
-                              : "Membre"
-                          }
-                        </span>
+                              : "Membre"}
+                          </span>
+
+                          {isParticipant &&
+                            participant.id !==
+                              myParticipantId && (
+
+                            <button
+                              className="secondary-btn"
+                              style={{
+                                padding:
+                                  "7px 10px",
+
+                                color:
+                                  "#dc2626",
+
+                                background:
+                                  "#fef2f2",
+                              }}
+                              onClick={() =>
+                                setReportTarget({
+                                  type:
+                                    "PARTICIPANT",
+
+                                  id:
+                                    participant.id,
+
+                                  label:
+                                    participant.anonymousName,
+                                })
+                              }
+                            >
+                              Signaler
+                            </button>
+                          )}
+
+                        </div>
 
                       </div>
                     )
@@ -823,9 +1112,11 @@ export default function SessionsPage() {
 
                   {messages.length ===
                   0 ? (
+
                     <p className="empty-text">
-                      Aucun message pour le moment.
+                      Aucun message.
                     </p>
+
                   ) : (
 
                     messages.map(
@@ -877,16 +1168,18 @@ export default function SessionsPage() {
                       chatText
                     }
                     onChange={(
-                      e
+                      event
                     ) =>
                       setChatText(
-                        e.target
+                        event.target
                           .value
                       )
                     }
                   />
 
-                  <button type="submit">
+                  <button
+                    type="submit"
+                  >
                     Envoyer
                   </button>
 
@@ -901,6 +1194,22 @@ export default function SessionsPage() {
       </div>
     );
   }
+
+  const radiusOptions =
+    subscription.premium
+      ? [
+          5,
+          10,
+          25,
+          50,
+          100,
+          200,
+        ]
+      : [
+          5,
+          10,
+          25,
+        ];
 
   return (
     <div className="app-page">
@@ -917,12 +1226,29 @@ export default function SessionsPage() {
           </h2>
 
           <p>
-            Recherchez une séance par activité,
-            salle ou date. Vous pouvez aussi
-            utiliser votre position afin
-            d’afficher les entraînements
-            réellement proches de vous.
+            Recherchez une séance par
+            activité, salle ou date.
           </p>
+
+          {subscription.premium ? (
+
+            <p>
+              ⭐ Premium actif :
+              rayon jusqu'à 200 km,
+              recherche avancée avec
+              <strong> -mot</strong> et
+              sessions mises en avant.
+            </p>
+
+          ) : (
+
+            <p>
+              Formule Standard :
+              rayon maximal 25 km.
+              Les filtres avancés sont
+              disponibles avec Premium.
+            </p>
+          )}
 
         </section>
 
@@ -931,8 +1257,6 @@ export default function SessionsPage() {
             {message}
           </div>
         )}
-
-        {/* RECHERCHE */}
 
         <form
           className="create-session-form"
@@ -949,15 +1273,20 @@ export default function SessionsPage() {
 
             <input
               type="text"
-              placeholder="Ex: jambes Basic-Fit ou musculation -cardio"
+              placeholder={
+                subscription.premium
+                  ? "Ex: musculation -cardio"
+                  : "Ex: musculation Basic-Fit"
+              }
               value={
                 filters.q
               }
-              onChange={(e) =>
+              onChange={(event) =>
                 setFilters({
                   ...filters,
+
                   q:
-                    e.target
+                    event.target
                       .value,
                 })
               }
@@ -977,12 +1306,12 @@ export default function SessionsPage() {
                 value={
                   filters.activityType
                 }
-                onChange={(e) =>
+                onChange={(event) =>
                   setFilters({
                     ...filters,
 
                     activityType:
-                      e.target
+                      event.target
                         .value,
                   })
                 }
@@ -996,6 +1325,7 @@ export default function SessionsPage() {
                   (
                     activity
                   ) => (
+
                     <option
                       key={
                         activity
@@ -1004,9 +1334,7 @@ export default function SessionsPage() {
                         activity
                       }
                     >
-                      {
-                        activity
-                      }
+                      {activity}
                     </option>
                   )
                 )}
@@ -1025,12 +1353,12 @@ export default function SessionsPage() {
                 value={
                   filters.gymId
                 }
-                onChange={(e) =>
+                onChange={(event) =>
                   setFilters({
                     ...filters,
 
                     gymId:
-                      e.target
+                      event.target
                         .value,
                   })
                 }
@@ -1042,6 +1370,7 @@ export default function SessionsPage() {
 
                 {gyms.map(
                   (gym) => (
+
                     <option
                       key={
                         gym.id
@@ -1072,12 +1401,12 @@ export default function SessionsPage() {
                 value={
                   filters.date
                 }
-                onChange={(e) =>
+                onChange={(event) =>
                   setFilters({
                     ...filters,
 
                     date:
-                      e.target
+                      event.target
                         .value,
                   })
                 }
@@ -1089,6 +1418,8 @@ export default function SessionsPage() {
 
               <label>
                 Rayon
+                {subscription.premium &&
+                  " ⭐"}
               </label>
 
               <select
@@ -1098,36 +1429,34 @@ export default function SessionsPage() {
                 disabled={
                   !userLocation
                 }
-                onChange={(e) =>
+                onChange={(event) =>
                   setFilters({
                     ...filters,
 
                     radiusKm:
-                      e.target
+                      event.target
                         .value,
                   })
                 }
               >
 
-                <option value="5">
-                  5 km
-                </option>
+                {radiusOptions.map(
+                  (
+                    radius
+                  ) => (
 
-                <option value="10">
-                  10 km
-                </option>
-
-                <option value="25">
-                  25 km
-                </option>
-
-                <option value="50">
-                  50 km
-                </option>
-
-                <option value="100">
-                  100 km
-                </option>
+                    <option
+                      key={
+                        radius
+                      }
+                      value={
+                        radius
+                      }
+                    >
+                      {radius} km
+                    </option>
+                  )
+                )}
 
               </select>
 
@@ -1143,7 +1472,8 @@ export default function SessionsPage() {
               alignItems:
                 "center",
 
-              gap: "10px",
+              gap:
+                "10px",
 
               color:
                 "#334155",
@@ -1158,22 +1488,24 @@ export default function SessionsPage() {
               checked={
                 filters.availableOnly
               }
-              onChange={(e) =>
+              onChange={(event) =>
                 setFilters({
                   ...filters,
 
                   availableOnly:
-                    e.target
+                    event.target
                       .checked,
                 })
               }
               style={{
-                width: "auto",
+                width:
+                  "auto",
               }}
             />
 
-            Afficher uniquement les sessions avec
-            des places disponibles
+            Afficher uniquement les
+            sessions avec des places
+            disponibles
 
           </label>
 
@@ -1199,7 +1531,7 @@ export default function SessionsPage() {
               }
             >
               {locationLoading
-                ? "Localisation en cours..."
+                ? "Localisation..."
                 : userLocation
                 ? "📍 Position activée"
                 : "📍 Utiliser ma position"}
@@ -1212,33 +1544,12 @@ export default function SessionsPage() {
                 resetSearch
               }
             >
-              Réinitialiser les filtres
+              Réinitialiser
             </button>
 
           </div>
 
-          {userLocation && (
-
-            <p
-              className="empty-text"
-              style={{
-                margin: 0,
-              }}
-            >
-              Géolocalisation active. Les résultats
-              sont limités à{" "}
-              {
-                filters.radiusKm
-              }{" "}
-              km et triés du plus proche au plus
-              éloigné.
-            </p>
-
-          )}
-
         </form>
-
-        {/* CRÉATION */}
 
         <div className="create-session-actions">
 
@@ -1266,6 +1577,87 @@ export default function SessionsPage() {
             }
           >
 
+            {/*
+             * Nouveau compteur permanent.
+             */}
+            <div
+              style={{
+                padding:
+                  "18px 20px",
+
+                borderRadius:
+                  "14px",
+
+                border:
+                  sessionLimitReached
+                    ? "1px solid #fdba74"
+                    : "1px solid #bfdbfe",
+
+                background:
+                  sessionLimitReached
+                    ? "#fff7ed"
+                    : "#eff6ff",
+
+                color:
+                  sessionLimitReached
+                    ? "#9a3412"
+                    : "#1d4ed8",
+
+                fontWeight:
+                  800,
+
+                textAlign:
+                  "center",
+              }}
+            >
+
+              <div>
+                {subscription.premium
+                  ? "⭐ PREMIUM"
+                  : "STANDARD"}
+                {" — "}
+                {
+                  activeCreatedSessions
+                }
+                {" / "}
+                {
+                  maxActiveSessions
+                }
+                {" sessions actives créées"}
+              </div>
+
+              <div
+                style={{
+                  marginTop:
+                    "6px",
+
+                  fontWeight:
+                    600,
+                }}
+              >
+                Capacité maximale :{" "}
+                {
+                  subscription.maxCapacity
+                }{" "}
+                participants par session
+              </div>
+
+              {sessionLimitReached && (
+
+                <div
+                  style={{
+                    marginTop:
+                      "10px",
+                  }}
+                >
+                  {subscription.premium
+                    ? `Limite Premium atteinte. Vous devez attendre la fin d'une session ou en annuler une avant d'en créer une nouvelle.`
+                    : "Limite Standard atteinte. Premium permet jusqu'à 10 sessions actives simultanément."}
+                </div>
+              )}
+
+            </div>
+
             <div className="form-row">
 
               <label>
@@ -1276,12 +1668,12 @@ export default function SessionsPage() {
                 value={
                   newSession.gymId
                 }
-                onChange={(e) =>
+                onChange={(event) =>
                   setNewSession({
                     ...newSession,
 
                     gymId:
-                      e.target
+                      event.target
                         .value,
                   })
                 }
@@ -1289,6 +1681,7 @@ export default function SessionsPage() {
 
                 {gyms.map(
                   (gym) => (
+
                     <option
                       key={
                         gym.id
@@ -1316,16 +1709,15 @@ export default function SessionsPage() {
 
               <input
                 type="text"
-                placeholder="Ex: Session haut du corps"
                 value={
                   newSession.title
                 }
-                onChange={(e) =>
+                onChange={(event) =>
                   setNewSession({
                     ...newSession,
 
                     title:
-                      e.target
+                      event.target
                         .value,
                   })
                 }
@@ -1343,12 +1735,12 @@ export default function SessionsPage() {
                 value={
                   newSession.activityType
                 }
-                onChange={(e) =>
+                onChange={(event) =>
                   setNewSession({
                     ...newSession,
 
                     activityType:
-                      e.target
+                      event.target
                         .value,
                   })
                 }
@@ -1358,6 +1750,7 @@ export default function SessionsPage() {
                   (
                     activity
                   ) => (
+
                     <option
                       key={
                         activity
@@ -1384,16 +1777,15 @@ export default function SessionsPage() {
               </label>
 
               <textarea
-                placeholder="Décrivez rapidement la séance..."
                 value={
                   newSession.description
                 }
-                onChange={(e) =>
+                onChange={(event) =>
                   setNewSession({
                     ...newSession,
 
                     description:
-                      e.target
+                      event.target
                         .value,
                   })
                 }
@@ -1414,12 +1806,12 @@ export default function SessionsPage() {
                   value={
                     newSession.startAt
                   }
-                  onChange={(e) =>
+                  onChange={(event) =>
                     setNewSession({
                       ...newSession,
 
                       startAt:
-                        e.target
+                        event.target
                           .value,
                     })
                   }
@@ -1440,12 +1832,12 @@ export default function SessionsPage() {
                   value={
                     newSession.durationMin
                   }
-                  onChange={(e) =>
+                  onChange={(event) =>
                     setNewSession({
                       ...newSession,
 
                       durationMin:
-                        e.target
+                        event.target
                           .value,
                     })
                   }
@@ -1462,15 +1854,19 @@ export default function SessionsPage() {
                 <input
                   type="number"
                   min="2"
+                  max={
+                    subscription.maxCapacity ||
+                    5
+                  }
                   value={
                     newSession.capacity
                   }
-                  onChange={(e) =>
+                  onChange={(event) =>
                     setNewSession({
                       ...newSession,
 
                       capacity:
-                        e.target
+                        event.target
                           .value,
                     })
                   }
@@ -1488,12 +1884,12 @@ export default function SessionsPage() {
                   value={
                     newSession.visibility
                   }
-                  onChange={(e) =>
+                  onChange={(event) =>
                     setNewSession({
                       ...newSession,
 
                       visibility:
-                        e.target
+                        event.target
                           .value,
                     })
                   }
@@ -1516,19 +1912,35 @@ export default function SessionsPage() {
             <button
               className="primary-btn"
               type="submit"
+              disabled={
+                sessionLimitReached
+              }
+              style={
+                sessionLimitReached
+                  ? {
+                      opacity:
+                        0.5,
+
+                      cursor:
+                        "not-allowed",
+                    }
+                  : undefined
+              }
             >
-              Enregistrer la session
+              {sessionLimitReached
+                ? `Limite atteinte (${activeCreatedSessions}/${maxActiveSessions})`
+                : "Enregistrer la session"}
             </button>
 
           </form>
-
         )}
 
         <p className="empty-text">
           {sessions.length} session(s) trouvée(s)
         </p>
 
-        {sessions.length === 0 ? (
+        {sessions.length ===
+        0 ? (
 
           <section className="session-card">
 
@@ -1537,8 +1949,7 @@ export default function SessionsPage() {
             </h3>
 
             <p className="description">
-              Modifiez les filtres ou augmentez
-              le rayon de recherche.
+              Modifiez vos filtres.
             </p>
 
           </section>
@@ -1565,16 +1976,22 @@ export default function SessionsPage() {
                       }
                     </span>
 
-                    <span className="capacity">
-                      {
-                        session.availablePlaces
-                      }{" "}
-                      /{" "}
-                      {
-                        session.capacity
-                      }{" "}
-                      place(s) libre(s)
-                    </span>
+                    {session
+                      .premiumHighlighted ? (
+
+                      <span className="capacity">
+                        ⭐ PREMIUM
+                      </span>
+
+                    ) : (
+
+                      <span className="capacity">
+                        {
+                          session.availablePlaces
+                        }{" "}
+                        place(s) libre(s)
+                      </span>
+                    )}
 
                   </div>
 
@@ -1591,10 +2008,8 @@ export default function SessionsPage() {
                   </p>
 
                   <p className="description">
-                    {
-                      session.description ||
-                      "Aucune description."
-                    }
+                    {session.description ||
+                      "Aucune description."}
                   </p>
 
                   <div className="session-meta">
@@ -1612,10 +2027,10 @@ export default function SessionsPage() {
                       <span>
                         🧭{" "}
                         {formatDistance(
-                          session.distanceKm
+                          session
+                            .distanceKm
                         )}
                       </span>
-
                     )}
 
                     <span>
@@ -1641,8 +2056,7 @@ export default function SessionsPage() {
                       /{" "}
                       {
                         session.capacity
-                      }{" "}
-                      participant(s)
+                      }
                     </span>
 
                   </div>
@@ -1659,12 +2073,10 @@ export default function SessionsPage() {
                   </button>
 
                 </article>
-
               )
             )}
 
           </section>
-
         )}
 
       </main>
@@ -1672,7 +2084,9 @@ export default function SessionsPage() {
   );
 }
 
-function formatDate(value) {
+function formatDate(
+  value
+) {
   if (!value) {
     return "Date inconnue";
   }
@@ -1682,11 +2096,20 @@ function formatDate(value) {
   ).toLocaleString(
     "fr-BE",
     {
-      day: "2-digit",
-      month: "2-digit",
-      year: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
+      day:
+        "2-digit",
+
+      month:
+        "2-digit",
+
+      year:
+        "numeric",
+
+      hour:
+        "2-digit",
+
+      minute:
+        "2-digit",
     }
   );
 }
@@ -1694,11 +2117,15 @@ function formatDate(value) {
 function formatDistance(
   distanceKm
 ) {
-  if (distanceKm == null) {
+  if (
+    distanceKm == null
+  ) {
     return "Distance inconnue";
   }
 
-  if (distanceKm < 1) {
+  if (
+    distanceKm < 1
+  ) {
     return `${Math.round(
       distanceKm * 1000
     )} m`;

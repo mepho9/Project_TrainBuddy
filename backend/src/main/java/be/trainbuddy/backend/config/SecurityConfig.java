@@ -21,7 +21,8 @@ import java.util.List;
 @RequiredArgsConstructor
 public class SecurityConfig {
 
-    private final JwtAuthenticationFilter jwtAuthenticationFilter;
+    private final JwtAuthenticationFilter
+            jwtAuthenticationFilter;
 
     @Bean
     public SecurityFilterChain filterChain(
@@ -64,16 +65,30 @@ public class SecurityConfig {
                         ).permitAll()
 
                         /*
-                         * Toute la zone d'administration
-                         * est strictement réservée au rôle ADMIN.
+                         * Stripe doit pouvoir appeler
+                         * ce endpoint depuis ses serveurs.
+                         *
+                         * La sécurité repose ici sur la
+                         * signature Stripe et non JWT.
                          */
+                        .requestMatchers(
+                                HttpMethod.POST,
+                                "/api/v1/stripe/webhook"
+                        ).permitAll()
+
                         .requestMatchers(
                                 "/api/v1/admin/**"
                         ).hasRole("ADMIN")
 
-                        /*
-                         * Routes réservées aux membres.
-                         */
+                        .requestMatchers(
+                                "/api/v1/subscriptions/**"
+                        ).hasRole("MEMBER")
+
+                        .requestMatchers(
+                                HttpMethod.POST,
+                                "/api/v1/reports/**"
+                        ).hasRole("MEMBER")
+
                         .requestMatchers(
                                 HttpMethod.GET,
                                 "/api/v1/sessions/my",
@@ -99,12 +114,6 @@ public class SecurityConfig {
                                 "/api/v1/sessions/*/cancel"
                         ).hasRole("MEMBER")
 
-                        /*
-                         * Consultation publique.
-                         *
-                         * La création des salles n'est plus
-                         * accessible aux MEMBER.
-                         */
                         .requestMatchers(
                                 HttpMethod.GET,
                                 "/api/v1/gyms",
