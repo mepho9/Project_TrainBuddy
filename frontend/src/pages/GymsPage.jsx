@@ -1,57 +1,157 @@
-import { useEffect, useState } from "react";
-import api from "../api/axios";
+import {
+  useEffect,
+  useState,
+} from "react";
+
+import api
+  from "../api/axios";
+
+import { useLanguage }
+  from "../i18n/LanguageContext";
 
 export default function GymsPage() {
-  const [gyms, setGyms] = useState([]);
-  const [message, setMessage] = useState("");
+  const { t } =
+    useLanguage();
 
-  const fetchGyms = async () => {
-    try {
-      const res = await api.get("/gyms");
-      setGyms(res.data);
-    } catch (err) {
-      setMessage("Impossible de charger les salles.");
-      console.error(err);
-    }
-  };
+  const [
+    gyms,
+    setGyms,
+  ] = useState([]);
+
+  const [
+    message,
+    setMessage,
+  ] = useState("");
 
   useEffect(() => {
-    fetchGyms();
-  }, []);
+    let cancelled =
+      false;
+
+    void (async () => {
+      try {
+        const res =
+          await api.get(
+            "/gyms"
+          );
+
+        if (cancelled) {
+          return;
+        }
+
+        setGyms(
+          res.data
+        );
+
+      } catch (err) {
+        if (cancelled) {
+          return;
+        }
+
+        setMessage(
+          t(
+            "gyms.loadError"
+          )
+        );
+
+        console.error(
+          err
+        );
+      }
+    })();
+
+    return () => {
+      cancelled =
+        true;
+    };
+
+  }, [t]);
 
   return (
     <main className="content">
+
       <section className="hero-section">
-        <p className="eyebrow">Salles partenaires</p>
-        <h2>Choisissez votre salle d’entraînement</h2>
-        <p>
-          Retrouvez les salles disponibles sur TrainBuddy et consultez les lieux
-          où des sessions peuvent être organisées.
+
+        <p className="eyebrow">
+          {t(
+            "gyms.eyebrow"
+          )}
         </p>
+
+        <h2>
+          {t(
+            "gyms.title"
+          )}
+        </h2>
+
+        <p>
+          {t(
+            "gyms.description"
+          )}
+        </p>
+
       </section>
 
-      {message && <div className="page-message">{message}</div>}
+      {message && (
+        <div className="page-message">
+          {message}
+        </div>
+      )}
 
       <section className="gyms-grid">
-        {gyms.map((gym) => (
-          <article className="gym-card" key={gym.id}>
-            <div className="gym-icon">📍</div>
 
-            <div>
-              <h3>{gym.name}</h3>
-              <p className="activity">{gym.type}</p>
-              <p className="description">{gym.address}</p>
-            </div>
+        {gyms.map(
+          (gym) => (
 
-            <div className="gym-meta">
-              <span>{gym.active ? "Active" : "Inactive"}</span>
-              <span>
-                {gym.latitude}, {gym.longitude}
-              </span>
-            </div>
-          </article>
-        ))}
+            <article
+              className="gym-card"
+              key={gym.id}
+            >
+
+              <div className="gym-icon">
+                📍
+              </div>
+
+              <div>
+
+                <h3>
+                  {gym.name}
+                </h3>
+
+                <p className="activity">
+                  {gym.type}
+                </p>
+
+                <p className="description">
+                  {gym.address}
+                </p>
+
+              </div>
+
+              <div className="gym-meta">
+
+                <span>
+                  {gym.active
+                    ? t(
+                        "common.active"
+                      )
+                    : t(
+                        "common.inactive"
+                      )}
+                </span>
+
+                <span>
+                  {gym.latitude},{" "}
+                  {gym.longitude}
+                </span>
+
+              </div>
+
+            </article>
+          )
+        )}
+
       </section>
+
     </main>
   );
 }

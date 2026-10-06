@@ -3,7 +3,11 @@ import {
   useState,
 } from "react";
 
-import api from "../api/axios";
+import api
+  from "../api/axios";
+
+import { useLanguage }
+  from "../i18n/LanguageContext";
 
 const EMPTY_SUBSCRIPTION = {
   planCode: "STANDARD",
@@ -25,17 +29,28 @@ const EMPTY_SUBSCRIPTION = {
 export default function ProfilePage({
   onLogout,
 }) {
+  const {
+    t,
+    locale,
+  } = useLanguage();
+
   const email =
-    localStorage.getItem("email");
+    localStorage.getItem(
+      "email"
+    );
 
   const role =
-    localStorage.getItem("role");
+    localStorage.getItem(
+      "role"
+    );
 
-  const [mySessions, setMySessions] =
-    useState({
-      created: [],
-      joined: [],
-    });
+  const [
+    mySessions,
+    setMySessions,
+  ] = useState({
+    created: [],
+    joined: [],
+  });
 
   const [
     subscription,
@@ -44,19 +59,27 @@ export default function ProfilePage({
     EMPTY_SUBSCRIPTION
   );
 
-  const [activeTab, setActiveTab] =
-    useState("created");
+  const [
+    activeTab,
+    setActiveTab,
+  ] = useState(
+    "created"
+  );
 
-  const [loading, setLoading] =
-    useState(true);
+  const [
+    loading,
+    setLoading,
+  ] = useState(true);
 
   const [
     subscriptionLoading,
     setSubscriptionLoading,
   ] = useState(true);
 
-  const [message, setMessage] =
-    useState("");
+  const [
+    message,
+    setMessage,
+  ] = useState("");
 
   const fetchMySessions =
     async () => {
@@ -75,14 +98,19 @@ export default function ProfilePage({
             response.data.joined ||
             [],
         });
+
       } catch (error) {
         setMessage(
           error.response?.data
             ?.message ||
-            "Impossible de charger vos sessions."
+            t(
+              "profile.sessionsLoadError"
+            )
         );
 
-        console.error(error);
+        console.error(
+          error
+        );
       }
     };
 
@@ -101,31 +129,25 @@ export default function ProfilePage({
         setSubscription(
           response.data
         );
+
       } catch (error) {
         setMessage(
           error.response?.data
             ?.message ||
-            "Impossible de charger votre abonnement."
+            t(
+              "subscription.loadError"
+            )
         );
 
-        console.error(error);
+        console.error(
+          error
+        );
+
       } finally {
         setSubscriptionLoading(
           false
         );
       }
-    };
-
-  const fetchEverything =
-    async () => {
-      setLoading(true);
-
-      await Promise.all([
-        fetchMySessions(),
-        fetchSubscription(),
-      ]);
-
-      setLoading(false);
     };
 
   const startPremiumCheckout =
@@ -138,14 +160,19 @@ export default function ProfilePage({
 
         window.location.href =
           response.data.url;
+
       } catch (error) {
         setMessage(
           error.response?.data
             ?.message ||
-            "Impossible de démarrer le paiement Stripe."
+            t(
+              "subscription.checkoutError"
+            )
         );
 
-        console.error(error);
+        console.error(
+          error
+        );
       }
     };
 
@@ -153,7 +180,9 @@ export default function ProfilePage({
     async () => {
       const confirmed =
         window.confirm(
-          "Annuler Premium à la fin de la période déjà payée ? Vous conserverez vos avantages jusqu'à cette date."
+          t(
+            "subscription.cancelConfirm"
+          )
         );
 
       if (!confirmed) {
@@ -171,24 +200,35 @@ export default function ProfilePage({
         );
 
         setMessage(
-          "L'annulation est programmée. Premium reste actif jusqu'à la fin de la période en cours."
+          t(
+            "subscription.cancelScheduled"
+          )
         );
+
       } catch (error) {
         setMessage(
           error.response?.data
             ?.message ||
-            "Impossible d'annuler l'abonnement."
+            t(
+              "subscription.cancelError"
+            )
         );
 
-        console.error(error);
+        console.error(
+          error
+        );
       }
     };
 
   const cancelSession =
-    async (sessionId) => {
+    async (
+      sessionId
+    ) => {
       const confirmed =
         window.confirm(
-          "Voulez-vous vraiment annuler cette session ? Les autres membres ne pourront plus la rejoindre."
+          t(
+            "profile.cancelConfirm"
+          )
         );
 
       if (!confirmed) {
@@ -201,15 +241,11 @@ export default function ProfilePage({
         );
 
         setMessage(
-          "La session a été annulée."
+          t(
+            "profile.cancelSuccess"
+          )
         );
 
-        /*
-         * On recharge à la fois les sessions
-         * ET l'abonnement afin que le compteur
-         * passe immédiatement de 2/2 à 1/2,
-         * par exemple.
-         */
         await Promise.all([
           fetchMySessions(),
           fetchSubscription(),
@@ -219,18 +255,26 @@ export default function ProfilePage({
         setMessage(
           error.response?.data
             ?.message ||
-            "Impossible d'annuler la session."
+            t(
+              "profile.cancelError"
+            )
         );
 
-        console.error(error);
+        console.error(
+          error
+        );
       }
     };
 
   const leaveSession =
-    async (sessionId) => {
+    async (
+      sessionId
+    ) => {
       const confirmed =
         window.confirm(
-          "Voulez-vous vraiment quitter cette session ?"
+          t(
+            "profile.leaveConfirm"
+          )
         );
 
       if (!confirmed) {
@@ -243,23 +287,42 @@ export default function ProfilePage({
         );
 
         setMessage(
-          "Vous avez quitté la session."
+          t(
+            "profile.leaveSuccess"
+          )
         );
 
         await fetchMySessions();
+
       } catch (error) {
         setMessage(
           error.response?.data
             ?.message ||
-            "Impossible de quitter la session."
+            t(
+              "profile.leaveError"
+            )
         );
 
-        console.error(error);
+        console.error(
+          error
+        );
       }
     };
 
+  /*
+   * Chargement initial.
+   *
+   * On fait les appels réseau directement
+   * dans la tâche asynchrone du useEffect.
+   *
+   * Les setState arrivent après les await.
+   */
   useEffect(() => {
-    fetchEverything();
+    let cancelled =
+      false;
+
+    let timer =
+      null;
 
     const params =
       new URLSearchParams(
@@ -271,53 +334,167 @@ export default function ProfilePage({
         "checkout"
       );
 
-    let timer;
-
-    if (
-      checkout === "success"
-    ) {
-      setMessage(
-        "Paiement Stripe terminé. Activation de Premium en cours..."
-      );
-
-      timer =
-        window.setTimeout(
-          async () => {
-            await fetchSubscription();
-
-            setMessage(
-              "Paiement terminé. Votre statut d'abonnement a été actualisé."
-            );
-          },
-          2000
+    if (checkout) {
+      window.history
+        .replaceState(
+          {},
+          "",
+          window.location.pathname
         );
     }
 
-    if (
-      checkout ===
-      "cancelled"
-    ) {
-      setMessage(
-        "Paiement annulé. Votre compte reste en formule Standard."
-      );
-    }
+    void (async () => {
+      try {
+        const [
+          sessionsResponse,
+          subscriptionResponse,
+        ] =
+          await Promise.all([
+            api.get(
+              "/sessions/my"
+            ),
 
-    if (checkout) {
-      window.history.replaceState(
-        {},
-        "",
-        window.location.pathname
-      );
-    }
+            api.get(
+              "/subscriptions/me"
+            ),
+          ]);
+
+        if (cancelled) {
+          return;
+        }
+
+        setMySessions({
+          created:
+            sessionsResponse
+              .data.created ||
+            [],
+
+          joined:
+            sessionsResponse
+              .data.joined ||
+            [],
+        });
+
+        setSubscription(
+          subscriptionResponse.data
+        );
+
+        if (
+          checkout ===
+          "success"
+        ) {
+          setMessage(
+            t(
+              "subscription.checkoutProcessing"
+            )
+          );
+
+          timer =
+            window.setTimeout(
+              async () => {
+                try {
+                  const response =
+                    await api.get(
+                      "/subscriptions/me"
+                    );
+
+                  if (
+                    cancelled
+                  ) {
+                    return;
+                  }
+
+                  setSubscription(
+                    response.data
+                  );
+
+                  setMessage(
+                    t(
+                      "subscription.checkoutUpdated"
+                    )
+                  );
+
+                } catch (error) {
+                  if (
+                    cancelled
+                  ) {
+                    return;
+                  }
+
+                  setMessage(
+                    error.response
+                      ?.data
+                      ?.message ||
+                    t(
+                      "subscription.loadError"
+                    )
+                  );
+
+                  console.error(
+                    error
+                  );
+                }
+              },
+
+              2000
+            );
+        }
+
+        if (
+          checkout ===
+          "cancelled"
+        ) {
+          setMessage(
+            t(
+              "subscription.checkoutCancelled"
+            )
+          );
+        }
+
+      } catch (error) {
+        if (cancelled) {
+          return;
+        }
+
+        setMessage(
+          error.response?.data
+            ?.message ||
+            t(
+              "profile.sessionsLoadError"
+            )
+        );
+
+        console.error(
+          error
+        );
+
+      } finally {
+        if (
+          !cancelled
+        ) {
+          setLoading(
+            false
+          );
+
+          setSubscriptionLoading(
+            false
+          );
+        }
+      }
+    })();
 
     return () => {
+      cancelled =
+        true;
+
       if (timer) {
         window.clearTimeout(
           timer
         );
       }
     };
-  }, []);
+
+  }, [t]);
 
   const displayedSessions =
     activeTab ===
@@ -332,8 +509,10 @@ export default function ProfilePage({
     ).toFixed(2);
 
   const sessionLimitReached =
-    subscription.activeCreatedSessions >=
-    subscription.maxActiveSessions;
+    subscription
+      .activeCreatedSessions >=
+    subscription
+      .maxActiveSessions;
 
   return (
     <main className="content">
@@ -341,17 +520,21 @@ export default function ProfilePage({
       <section className="hero-section">
 
         <p className="eyebrow">
-          Profil membre
+          {t(
+            "profile.eyebrow"
+          )}
         </p>
 
         <h2>
-          Votre espace personnel
+          {t(
+            "profile.title"
+          )}
         </h2>
 
         <p>
-          Gérez votre compte,
-          votre abonnement et vos
-          sessions TrainBuddy.
+          {t(
+            "profile.description"
+          )}
         </p>
 
       </section>
@@ -379,30 +562,43 @@ export default function ProfilePage({
             flex: 1,
           }}
         >
+
           <h3>
             {email}
           </h3>
 
           <p>
-            Rôle : {role}
+            {t(
+              "profile.role"
+            )}
+            : {role}
           </p>
 
           {subscription.premium && (
+
             <p
               style={{
-                fontWeight: 700,
+                fontWeight:
+                  700,
               }}
             >
-              ⭐ Membre Premium
+              {t(
+                "profile.premiumMember"
+              )}
             </p>
           )}
+
         </div>
 
         <button
           className="logout-btn"
-          onClick={onLogout}
+          onClick={
+            onLogout
+          }
         >
-          Se déconnecter
+          {t(
+            "nav.logout"
+          )}
         </button>
 
       </section>
@@ -410,19 +606,29 @@ export default function ProfilePage({
       <section className="hero-section">
 
         <p className="eyebrow">
-          Mon abonnement
+          {t(
+            "subscription.eyebrow"
+          )}
         </p>
 
         <h2>
           {subscription.premium
-            ? "⭐ TrainBuddy Premium"
-            : "TrainBuddy Standard"}
+            ? t(
+                "subscription.premiumName"
+              )
+            : t(
+                "subscription.standardName"
+              )}
         </h2>
 
         <p>
           {subscription.premium
-            ? "Votre compte bénéficie actuellement des fonctionnalités Premium."
-            : "Passez à Premium pour créer davantage de sessions et accéder aux fonctionnalités avancées."}
+            ? t(
+                "subscription.premiumDescription"
+              )
+            : t(
+                "subscription.standardDescription"
+              )}
         </p>
 
       </section>
@@ -430,9 +636,13 @@ export default function ProfilePage({
       {subscriptionLoading ? (
 
         <section className="session-card">
+
           <h3>
-            Chargement de l'abonnement...
+            {t(
+              "common.loading"
+            )}
           </h3>
+
         </section>
 
       ) : (
@@ -454,17 +664,27 @@ export default function ProfilePage({
             </span>
 
             <span className="capacity">
+
               {subscription.premium
-                ? `${premiumPrice} € / mois`
-                : "Gratuit"}
+                ? `${premiumPrice} € / ${t(
+                    "subscription.month"
+                  )}`
+                : t(
+                    "subscription.free"
+                  )}
+
             </span>
 
           </div>
 
           <h3>
-            {
-              subscription.planName
-            }
+            {subscription.premium
+              ? t(
+                  "subscription.premiumName"
+                )
+              : t(
+                  "subscription.standardName"
+                )}
           </h3>
 
           <div className="session-meta">
@@ -477,51 +697,97 @@ export default function ProfilePage({
                     : 600,
               }}
             >
-              📅 Sessions actives créées :{" "}
-              {
-                subscription.activeCreatedSessions
-              }
-              {" / "}
-              {
-                subscription.maxActiveSessions
-              }
+
+              {t(
+                "subscription.activeSessions",
+                {
+                  current:
+                    subscription
+                      .activeCreatedSessions,
+
+                  max:
+                    subscription
+                      .maxActiveSessions,
+                }
+              )}
+
             </span>
 
             <span>
-              👥 Capacité maximale :{" "}
-              {
-                subscription.maxCapacity
-              }
+
+              {t(
+                "subscription.capacity",
+                {
+                  count:
+                    subscription
+                      .maxCapacity,
+                }
+              )}
+
             </span>
 
             <span>
-              🔎 Filtres avancés :{" "}
-              {subscription.advancedFilters
-                ? "Oui"
-                : "Non"}
+
+              {t(
+                "subscription.filters",
+                {
+                  value:
+                    subscription
+                      .advancedFilters
+                      ? t(
+                          "common.yes"
+                        )
+                      : t(
+                          "common.no"
+                        ),
+                }
+              )}
+
             </span>
 
             <span>
-              ⭐ Mise en avant :{" "}
-              {subscription.highlightedSessions
-                ? "Oui"
-                : "Non"}
+
+              {t(
+                "subscription.highlight",
+                {
+                  value:
+                    subscription
+                      .highlightedSessions
+                      ? t(
+                          "common.yes"
+                        )
+                      : t(
+                          "common.no"
+                        ),
+                }
+              )}
+
             </span>
 
             {subscription
               .currentPeriodEnd && (
+
               <span>
-                🗓️ Fin de période :{" "}
-                {formatDate(
-                  subscription
-                    .currentPeriodEnd
+
+                {t(
+                  "subscription.periodEnd",
+                  {
+                    date:
+                      formatDate(
+                        subscription
+                          .currentPeriodEnd,
+                        locale
+                      ),
+                  }
                 )}
+
               </span>
             )}
 
           </div>
 
           {sessionLimitReached && (
+
             <div
               className="page-message"
               style={{
@@ -529,9 +795,20 @@ export default function ProfilePage({
                   "18px",
               }}
             >
+
               {subscription.premium
-                ? `Vous avez atteint la limite Premium de ${subscription.maxActiveSessions} sessions actives.`
-                : "Vous avez atteint la limite Standard. Premium permet jusqu'à 10 sessions actives."}
+                ? t(
+                    "subscription.premiumLimit",
+                    {
+                      max:
+                        subscription
+                          .maxActiveSessions,
+                    }
+                  )
+                : t(
+                    "subscription.standardLimit"
+                  )}
+
             </div>
           )}
 
@@ -545,15 +822,15 @@ export default function ProfilePage({
             >
 
               <h4>
-                Premium — 4,99 € / mois
+                {t(
+                  "subscription.offer"
+                )}
               </h4>
 
               <p className="description">
-                Jusqu'à 10 sessions actives,
-                12 participants par session,
-                rayon jusqu'à 200 km,
-                recherche avec -mot et
-                mise en avant de vos sessions.
+                {t(
+                  "subscription.offerDescription"
+                )}
               </p>
 
               <button
@@ -562,7 +839,9 @@ export default function ProfilePage({
                   startPremiumCheckout
                 }
               >
-                Passer Premium — 4,99 €/mois
+                {t(
+                  "subscription.upgrade"
+                )}
               </button>
 
             </div>
@@ -582,7 +861,9 @@ export default function ProfilePage({
                 cancelPremium
               }
             >
-              Annuler l'abonnement
+              {t(
+                "subscription.cancel"
+              )}
             </button>
           )}
 
@@ -597,9 +878,9 @@ export default function ProfilePage({
                   "20px",
               }}
             >
-              Annulation programmée.
-              Premium reste actif jusqu'à
-              la fin de la période payée.
+              {t(
+                "subscription.cancelScheduled"
+              )}
             </div>
           )}
 
@@ -609,17 +890,21 @@ export default function ProfilePage({
       <section className="hero-section">
 
         <p className="eyebrow">
-          Mes sessions
+          {t(
+            "profile.sessionsEyebrow"
+          )}
         </p>
 
         <h2>
-          Vos entraînements
+          {t(
+            "profile.sessionsTitle"
+          )}
         </h2>
 
         <p>
-          Retrouvez les séances
-          que vous avez créées et
-          celles que vous avez rejointes.
+          {t(
+            "profile.sessionsDescription"
+          )}
         </p>
 
       </section>
@@ -648,12 +933,16 @@ export default function ProfilePage({
             )
           }
         >
-          Créées (
+          {t(
+            "profile.created"
+          )}{" "}
+          (
           {
             mySessions
               .created
               .length
-          })
+          }
+          )
         </button>
 
         <button
@@ -669,12 +958,16 @@ export default function ProfilePage({
             )
           }
         >
-          Rejointes (
+          {t(
+            "profile.joined"
+          )}{" "}
+          (
           {
             mySessions
               .joined
               .length
-          })
+          }
+          )
         </button>
 
       </div>
@@ -682,13 +975,19 @@ export default function ProfilePage({
       {loading ? (
 
         <section className="session-card">
+
           <h3>
-            Chargement...
+            {t(
+              "common.loading"
+            )}
           </h3>
 
           <p className="description">
-            Récupération de vos sessions.
+            {t(
+              "common.loading"
+            )}
           </p>
+
         </section>
 
       ) : displayedSessions.length ===
@@ -697,14 +996,22 @@ export default function ProfilePage({
         <section className="session-card">
 
           <h3>
-            Aucune session
+            {t(
+              "sessions.none"
+            )}
           </h3>
 
           <p className="description">
+
             {activeTab ===
             "created"
-              ? "Vous n'avez encore créé aucune session."
-              : "Vous n'avez rejoint aucune session."}
+              ? t(
+                  "profile.noCreated"
+                )
+              : t(
+                  "profile.noJoined"
+                )}
+
           </p>
 
         </section>
@@ -726,16 +1033,22 @@ export default function ProfilePage({
                 <div className="session-card-header">
 
                   <span className="badge">
-                    {formatStatus(
-                      session.status
+
+                    {t(
+                      `status.${session.status}`
                     )}
+
                   </span>
 
                   {session
                     .premiumHighlighted && (
 
                     <span className="capacity">
-                      ⭐ PREMIUM
+
+                      {t(
+                        "sessions.premium"
+                      )}
+
                     </span>
                   )}
 
@@ -748,14 +1061,21 @@ export default function ProfilePage({
                 </h3>
 
                 <p className="activity">
-                  {
-                    session.activityType
-                  }
+
+                  {activityLabel(
+                    session.activityType,
+                    t
+                  )}
+
                 </p>
 
                 <p className="description">
+
                   {session.description ||
-                    "Aucune description."}
+                    t(
+                      "sessions.noDescription"
+                    )}
+
                 </p>
 
                 <div className="session-meta">
@@ -770,7 +1090,8 @@ export default function ProfilePage({
                   <span>
                     🕒{" "}
                     {formatDate(
-                      session.startAt
+                      session.startAt,
+                      locale
                     )}
                   </span>
 
@@ -779,7 +1100,9 @@ export default function ProfilePage({
                     {
                       session.durationMin
                     }{" "}
-                    min
+                    {t(
+                      "common.minutes"
+                    )}
                   </span>
 
                   <span>
@@ -815,7 +1138,9 @@ export default function ProfilePage({
                       )
                     }
                   >
-                    Annuler la session
+                    {t(
+                      "profile.cancelSession"
+                    )}
                   </button>
                 )}
 
@@ -839,7 +1164,9 @@ export default function ProfilePage({
                       )
                     }
                   >
-                    Quitter la session
+                    {t(
+                      "profile.leaveSession"
+                    )}
                   </button>
                 )}
 
@@ -854,7 +1181,9 @@ export default function ProfilePage({
                         "100%",
                     }}
                   >
-                    Session terminée
+                    {t(
+                      "profile.completed"
+                    )}
                   </button>
                 )}
 
@@ -865,7 +1194,9 @@ export default function ProfilePage({
                     className="secondary-btn"
                     disabled
                   >
-                    Session annulée
+                    {t(
+                      "profile.cancelled"
+                    )}
                   </button>
                 )}
 
@@ -881,16 +1212,17 @@ export default function ProfilePage({
 }
 
 function formatDate(
-  value
+  value,
+  locale
 ) {
   if (!value) {
-    return "Date inconnue";
+    return "";
   }
 
   return new Date(
     value
   ).toLocaleString(
-    "fr-BE",
+    locale,
     {
       day:
         "2-digit",
@@ -910,21 +1242,17 @@ function formatDate(
   );
 }
 
-function formatStatus(
-  status
+function activityLabel(
+  activity,
+  t
 ) {
-  switch (status) {
+  const key =
+    `activity.${activity}`;
 
-    case "UPCOMING":
-      return "À venir";
+  const translated =
+    t(key);
 
-    case "COMPLETED":
-      return "Terminée";
-
-    case "CANCELLED":
-      return "Annulée";
-
-    default:
-      return status;
-  }
+  return translated === key
+    ? activity
+    : translated;
 }

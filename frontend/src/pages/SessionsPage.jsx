@@ -4,7 +4,12 @@ import {
 } from "react";
 
 import api from "../api/axios";
-import ReportPanel from "../components/ReportPanel";
+
+import ReportPanel
+  from "../components/ReportPanel";
+
+import { useLanguage }
+  from "../i18n/LanguageContext";
 
 const DEFAULT_FILTERS = {
   q: "",
@@ -34,11 +39,20 @@ const ACTIVITIES = [
 ];
 
 export default function SessionsPage() {
-  const [sessions, setSessions] =
-    useState([]);
+  const {
+    t,
+    locale,
+  } = useLanguage();
 
-  const [gyms, setGyms] =
-    useState([]);
+  const [
+    sessions,
+    setSessions,
+  ] = useState([]);
+
+  const [
+    gyms,
+    setGyms,
+  ] = useState([]);
 
   const [
     subscription,
@@ -57,14 +71,20 @@ export default function SessionsPage() {
     setParticipants,
   ] = useState([]);
 
-  const [messages, setMessages] =
-    useState([]);
+  const [
+    messages,
+    setMessages,
+  ] = useState([]);
 
-  const [chatText, setChatText] =
-    useState("");
+  const [
+    chatText,
+    setChatText,
+  ] = useState("");
 
-  const [message, setMessage] =
-    useState("");
+  const [
+    message,
+    setMessage,
+  ] = useState("");
 
   const [
     showCreateForm,
@@ -91,8 +111,12 @@ export default function SessionsPage() {
     setReportTarget,
   ] = useState(null);
 
-  const [filters, setFilters] =
-    useState(DEFAULT_FILTERS);
+  const [
+    filters,
+    setFilters,
+  ] = useState(
+    DEFAULT_FILTERS
+  );
 
   const [
     userLocation,
@@ -153,6 +177,7 @@ export default function SessionsPage() {
         setSubscription(
           response.data
         );
+
       } catch (error) {
         console.error(
           error
@@ -234,53 +259,24 @@ export default function SessionsPage() {
         setSessions(
           res.data
         );
+
       } catch (err) {
         setMessage(
           err.response?.data
             ?.message ||
-            "Impossible de charger les sessions."
+            t(
+              "sessions.loadError"
+            )
         );
 
-        console.error(err);
+        console.error(
+          err
+        );
+
       } finally {
         setSearchLoading(
           false
         );
-      }
-    };
-
-  const fetchGyms =
-    async () => {
-      try {
-        const res =
-          await api.get(
-            "/gyms"
-          );
-
-        setGyms(
-          res.data
-        );
-
-        if (
-          res.data.length >
-          0
-        ) {
-          setNewSession(
-            (prev) => ({
-              ...prev,
-
-              gymId:
-                prev.gymId ||
-                res.data[0].id,
-            })
-          );
-        }
-      } catch (err) {
-        setMessage(
-          "Impossible de charger les salles."
-        );
-
-        console.error(err);
       }
     };
 
@@ -346,7 +342,9 @@ export default function SessionsPage() {
       setParticipants([]);
       setIsParticipant(false);
       setMyParticipantId(null);
-      setMyParticipantCreator(false);
+      setMyParticipantCreator(
+        false
+      );
       setReportTarget(null);
 
       try {
@@ -369,14 +367,19 @@ export default function SessionsPage() {
             session.id
           );
         }
+
       } catch (err) {
         setMessage(
           err.response?.data
             ?.message ||
-            "Impossible de charger les détails."
+            t(
+              "sessions.detailError"
+            )
         );
 
-        console.error(err);
+        console.error(
+          err
+        );
       }
     };
 
@@ -407,7 +410,9 @@ export default function SessionsPage() {
         );
 
         setMessage(
-          "Session rejointe avec succès !"
+          t(
+            "sessions.joinSuccess"
+          )
         );
 
         const currentCount =
@@ -446,6 +451,7 @@ export default function SessionsPage() {
             selectedSession.id
           ),
         ]);
+
       } catch (err) {
         if (
           err.response?.status ===
@@ -457,7 +463,9 @@ export default function SessionsPage() {
             );
 
           setMessage(
-            "Vous êtes déjà inscrit à cette session."
+            t(
+              "sessions.alreadyJoined"
+            )
           );
 
           if (participating) {
@@ -478,10 +486,14 @@ export default function SessionsPage() {
         setMessage(
           err.response?.data
             ?.message ||
-            "Erreur lors de l'inscription."
+            t(
+              "sessions.joinError"
+            )
         );
 
-        console.error(err);
+        console.error(
+          err
+        );
       }
     };
 
@@ -510,14 +522,19 @@ export default function SessionsPage() {
         await fetchMessages(
           selectedSession.id
         );
+
       } catch (err) {
         setMessage(
           err.response?.data
             ?.message ||
-            "Impossible d’envoyer le message."
+            t(
+              "chat.sendError"
+            )
         );
 
-        console.error(err);
+        console.error(
+          err
+        );
       }
     };
 
@@ -525,18 +542,21 @@ export default function SessionsPage() {
     async (event) => {
       event.preventDefault();
 
-      /*
-       * Blocage UX.
-       *
-       * Le backend vérifie toujours lui-même
-       * la limite : ceci n'est qu'un confort
-       * supplémentaire pour le membre.
-       */
-      if (sessionLimitReached) {
+      if (
+        sessionLimitReached
+      ) {
         setMessage(
           subscription.premium
-            ? `Vous avez déjà atteint la limite Premium de ${maxActiveSessions} sessions actives.`
-            : "Vous avez déjà atteint votre limite Standard de 2 sessions actives. Passez Premium pour en créer jusqu'à 10."
+            ? t(
+                "subscription.premiumLimit",
+                {
+                  max:
+                    maxActiveSessions,
+                }
+              )
+            : t(
+                "subscription.standardLimit"
+              )
         );
 
         return;
@@ -562,7 +582,9 @@ export default function SessionsPage() {
         );
 
         setMessage(
-          "Session créée avec succès !"
+          t(
+            "sessions.created"
+          )
         );
 
         setShowCreateForm(
@@ -585,26 +607,18 @@ export default function SessionsPage() {
 
           durationMin: 60,
 
-          capacity: Math.min(
-            4,
-            subscription.maxCapacity ||
-              5
-          ),
+          capacity:
+            Math.min(
+              4,
+              subscription
+                .maxCapacity ||
+                5
+            ),
 
           visibility:
             "PUBLIC",
         });
 
-        /*
-         * Très important :
-         * après création, on recharge
-         * également l'abonnement pour
-         * faire évoluer immédiatement :
-         *
-         * 0/2 → 1/2
-         * 1/2 → 2/2
-         * 4/10 → 5/10
-         */
         await Promise.all([
           fetchSessions(),
           fetchSubscription(),
@@ -614,17 +628,15 @@ export default function SessionsPage() {
         setMessage(
           err.response?.data
             ?.message ||
-            "Impossible de créer la session."
+            t(
+              "sessions.createError"
+            )
         );
 
-        console.error(err);
+        console.error(
+          err
+        );
 
-        /*
-         * Si le backend nous a refusé
-         * parce que l'état local était
-         * légèrement en retard, on
-         * resynchronise le compteur.
-         */
         await fetchSubscription();
       }
     };
@@ -666,7 +678,9 @@ export default function SessionsPage() {
         !navigator.geolocation
       ) {
         setMessage(
-          "La géolocalisation n'est pas disponible dans ce navigateur."
+          t(
+            "sessions.locationUnavailable"
+          )
         );
 
         return;
@@ -717,7 +731,9 @@ export default function SessionsPage() {
             );
 
             setMessage(
-              "Impossible de récupérer votre position. La recherche classique reste disponible."
+              t(
+                "sessions.locationError"
+              )
             );
           },
 
@@ -734,16 +750,96 @@ export default function SessionsPage() {
         );
     };
 
+  /*
+   * Chargement initial.
+   *
+   * Pas d'appel à une fonction qui déclenche
+   * immédiatement setState depuis le useEffect.
+   */
   useEffect(() => {
-    fetchSubscription();
+    let cancelled =
+      false;
 
-    fetchSessions(
-      DEFAULT_FILTERS,
-      null
-    );
+    void (async () => {
+      try {
+        const [
+          subscriptionResponse,
+          sessionsResponse,
+          gymsResponse,
+        ] =
+          await Promise.all([
+            api.get(
+              "/subscriptions/me"
+            ),
 
-    fetchGyms();
-  }, []);
+            api.get(
+              "/sessions"
+            ),
+
+            api.get(
+              "/gyms"
+            ),
+          ]);
+
+        if (cancelled) {
+          return;
+        }
+
+        setSubscription(
+          subscriptionResponse
+            .data
+        );
+
+        setSessions(
+          sessionsResponse
+            .data
+        );
+
+        setGyms(
+          gymsResponse.data
+        );
+
+        if (
+          gymsResponse.data
+            .length > 0
+        ) {
+          setNewSession(
+            (prev) => ({
+              ...prev,
+
+              gymId:
+                prev.gymId ||
+                gymsResponse
+                  .data[0].id,
+            })
+          );
+        }
+
+      } catch (err) {
+        if (cancelled) {
+          return;
+        }
+
+        setMessage(
+          err.response?.data
+            ?.message ||
+            t(
+              "sessions.loadError"
+            )
+        );
+
+        console.error(
+          err
+        );
+      }
+    })();
+
+    return () => {
+      cancelled =
+        true;
+    };
+
+  }, [t]);
 
   if (selectedSession) {
     return (
@@ -782,7 +878,9 @@ export default function SessionsPage() {
               setMessage("");
             }}
           >
-            ← Retour aux sessions
+            {t(
+              "sessions.back"
+            )}
           </button>
 
           {message && (
@@ -796,16 +894,18 @@ export default function SessionsPage() {
             <div className="session-card-header">
 
               <span className="badge">
-                {
-                  selectedSession.status
-                }
+                {t(
+                  `status.${selectedSession.status}`
+                )}
               </span>
 
               {selectedSession
                 .premiumHighlighted && (
 
                 <span className="capacity">
-                  ⭐ SESSION PREMIUM
+                  {t(
+                    "sessions.premium"
+                  )}
                 </span>
               )}
 
@@ -819,20 +919,32 @@ export default function SessionsPage() {
 
             <p>
               {selectedSession.description ||
-                "Aucune description disponible."}
+                t(
+                  "sessions.noDescription"
+                )}
             </p>
 
             <div className="session-detail-info">
 
               <span>
-                🏋️ Activité :{" "}
-                {
-                  selectedSession.activityType
-                }
+                🏋️{" "}
+                {t(
+                  "sessions.activity"
+                )}
+                :{" "}
+                {activityLabel(
+                  selectedSession
+                    .activityType,
+                  t
+                )}
               </span>
 
               <span>
-                📍 Salle :{" "}
+                📍{" "}
+                {t(
+                  "sessions.gym"
+                )}
+                :{" "}
                 {
                   selectedSession.gymName
                 }
@@ -843,32 +955,53 @@ export default function SessionsPage() {
                 null && (
 
                 <span>
-                  🧭 Distance :{" "}
+                  🧭{" "}
+                  {t(
+                    "sessions.distance"
+                  )}
+                  :{" "}
                   {formatDistance(
                     selectedSession
-                      .distanceKm
+                      .distanceKm,
+                    t
                   )}
                 </span>
               )}
 
               <span>
-                🕒 Date :{" "}
+                🕒{" "}
+                {t(
+                  "sessions.date"
+                )}
+                :{" "}
                 {formatDate(
                   selectedSession
-                    .startAt
+                    .startAt,
+                  locale
                 )}
               </span>
 
               <span>
-                ⏱️ Durée :{" "}
+                ⏱️{" "}
+                {t(
+                  "sessions.duration"
+                )}
+                :{" "}
                 {
-                  selectedSession.durationMin
+                  selectedSession
+                    .durationMin
                 }{" "}
-                min
+                {t(
+                  "common.minutes"
+                )}
               </span>
 
               <span>
-                👥 Participants :{" "}
+                👥{" "}
+                {t(
+                  "sessions.participants"
+                )}
+                :{" "}
                 {
                   selectedSession
                     .participantCount ??
@@ -876,15 +1009,26 @@ export default function SessionsPage() {
                 }{" "}
                 /{" "}
                 {
-                  selectedSession.capacity
+                  selectedSession
+                    .capacity
                 }
               </span>
 
               <span>
-                🔒 Visibilité :{" "}
-                {
-                  selectedSession.visibility
-                }
+                🔒{" "}
+                {t(
+                  "sessions.visibility"
+                )}
+                :{" "}
+                {selectedSession
+                  .visibility ===
+                "PUBLIC"
+                  ? t(
+                      "sessions.public"
+                    )
+                  : t(
+                      "sessions.private"
+                    )}
               </span>
 
             </div>
@@ -911,8 +1055,12 @@ export default function SessionsPage() {
                       .availablePlaces ??
                     1
                   ) <= 0
-                    ? "Session complète"
-                    : "Rejoindre la session"}
+                    ? t(
+                        "sessions.full"
+                      )
+                    : t(
+                        "sessions.join"
+                      )}
                 </button>
               )}
 
@@ -922,7 +1070,9 @@ export default function SessionsPage() {
                   className="success-btn"
                   disabled
                 >
-                  Session rejointe
+                  {t(
+                    "sessions.joined"
+                  )}
                 </button>
               )}
 
@@ -946,11 +1096,13 @@ export default function SessionsPage() {
                         selectedSession.id,
 
                       label:
-                        `la session "${selectedSession.title}"`,
+                        `"${selectedSession.title}"`,
                     })
                   }
                 >
-                  Signaler cette session
+                  {t(
+                    "sessions.reportSession"
+                  )}
                 </button>
               )}
 
@@ -973,7 +1125,9 @@ export default function SessionsPage() {
               );
 
               setMessage(
-                "Signalement envoyé."
+                t(
+                  "report.success"
+                )
               );
             }}
           />
@@ -983,14 +1137,18 @@ export default function SessionsPage() {
             <div className="participants-panel">
 
               <h3>
-                Participants anonymes
+                {t(
+                  "sessions.anonymousParticipants"
+                )}
               </h3>
 
               {participants.length ===
               0 ? (
 
                 <p className="empty-text">
-                  Aucun participant.
+                  {t(
+                    "sessions.noParticipants"
+                  )}
                 </p>
 
               ) : (
@@ -1013,14 +1171,19 @@ export default function SessionsPage() {
 
                           <strong>
                             {
-                              participant.anonymousName
+                              participant
+                                .anonymousName
                             }
                           </strong>
 
                           <p>
-                            Code :{" "}
+                            {t(
+                              "sessions.code"
+                            )}
+                            :{" "}
                             {
-                              participant.recognitionCode
+                              participant
+                                .recognitionCode
                             }
                           </p>
 
@@ -1041,8 +1204,12 @@ export default function SessionsPage() {
 
                           <span>
                             {participant.creator
-                              ? "Créateur"
-                              : "Membre"}
+                              ? t(
+                                  "common.creator"
+                                )
+                              : t(
+                                  "common.member"
+                                )}
                           </span>
 
                           {isParticipant &&
@@ -1070,11 +1237,14 @@ export default function SessionsPage() {
                                     participant.id,
 
                                   label:
-                                    participant.anonymousName,
+                                    participant
+                                      .anonymousName,
                                 })
                               }
                             >
-                              Signaler
+                              {t(
+                                "sessions.report"
+                              )}
                             </button>
                           )}
 
@@ -1096,14 +1266,19 @@ export default function SessionsPage() {
                 <div className="chat-header">
 
                   <h3>
-                    Chat anonyme
+                    {t(
+                      "chat.title"
+                    )}
                   </h3>
 
                   <span>
-                    {
-                      messages.length
-                    }{" "}
-                    message(s)
+                    {t(
+                      "chat.messageCount",
+                      {
+                        count:
+                          messages.length,
+                      }
+                    )}
                   </span>
 
                 </div>
@@ -1114,7 +1289,9 @@ export default function SessionsPage() {
                   0 ? (
 
                     <p className="empty-text">
-                      Aucun message.
+                      {t(
+                        "chat.none"
+                      )}
                     </p>
 
                   ) : (
@@ -1143,7 +1320,8 @@ export default function SessionsPage() {
 
                           <span>
                             {formatDate(
-                              msg.sentAt
+                              msg.sentAt,
+                              locale
                             )}
                           </span>
 
@@ -1163,7 +1341,9 @@ export default function SessionsPage() {
 
                   <input
                     type="text"
-                    placeholder="Écrire un message anonyme..."
+                    placeholder={t(
+                      "chat.placeholder"
+                    )}
                     value={
                       chatText
                     }
@@ -1180,7 +1360,9 @@ export default function SessionsPage() {
                   <button
                     type="submit"
                   >
-                    Envoyer
+                    {t(
+                      "chat.send"
+                    )}
                   </button>
 
                 </form>
@@ -1218,35 +1400,37 @@ export default function SessionsPage() {
         <section className="hero-section">
 
           <p className="eyebrow">
-            Sessions proches
+            {t(
+              "sessions.eyebrow"
+            )}
           </p>
 
           <h2>
-            Trouvez votre prochain partenaire d’entraînement
+            {t(
+              "sessions.title"
+            )}
           </h2>
 
           <p>
-            Recherchez une séance par
-            activité, salle ou date.
+            {t(
+              "sessions.description"
+            )}
           </p>
 
           {subscription.premium ? (
 
             <p>
-              ⭐ Premium actif :
-              rayon jusqu'à 200 km,
-              recherche avancée avec
-              <strong> -mot</strong> et
-              sessions mises en avant.
+              {t(
+                "sessions.premiumInfo"
+              )}
             </p>
 
           ) : (
 
             <p>
-              Formule Standard :
-              rayon maximal 25 km.
-              Les filtres avancés sont
-              disponibles avec Premium.
+              {t(
+                "sessions.standardInfo"
+              )}
             </p>
           )}
 
@@ -1268,15 +1452,21 @@ export default function SessionsPage() {
           <div className="form-row">
 
             <label>
-              Recherche
+              {t(
+                "sessions.searchLabel"
+              )}
             </label>
 
             <input
               type="text"
               placeholder={
                 subscription.premium
-                  ? "Ex: musculation -cardio"
-                  : "Ex: musculation Basic-Fit"
+                  ? t(
+                      "sessions.searchPremiumPlaceholder"
+                    )
+                  : t(
+                      "sessions.searchStandardPlaceholder"
+                    )
               }
               value={
                 filters.q
@@ -1299,7 +1489,9 @@ export default function SessionsPage() {
             <div className="form-row">
 
               <label>
-                Activité
+                {t(
+                  "sessions.activity"
+                )}
               </label>
 
               <select
@@ -1318,7 +1510,9 @@ export default function SessionsPage() {
               >
 
                 <option value="">
-                  Toutes
+                  {t(
+                    "sessions.allActivities"
+                  )}
                 </option>
 
                 {ACTIVITIES.map(
@@ -1334,7 +1528,10 @@ export default function SessionsPage() {
                         activity
                       }
                     >
-                      {activity}
+                      {activityLabel(
+                        activity,
+                        t
+                      )}
                     </option>
                   )
                 )}
@@ -1346,7 +1543,9 @@ export default function SessionsPage() {
             <div className="form-row">
 
               <label>
-                Salle
+                {t(
+                  "sessions.gym"
+                )}
               </label>
 
               <select
@@ -1365,7 +1564,9 @@ export default function SessionsPage() {
               >
 
                 <option value="">
-                  Toutes les salles
+                  {t(
+                    "sessions.allGyms"
+                  )}
                 </option>
 
                 {gyms.map(
@@ -1393,7 +1594,9 @@ export default function SessionsPage() {
             <div className="form-row">
 
               <label>
-                Date
+                {t(
+                  "sessions.date"
+                )}
               </label>
 
               <input
@@ -1417,7 +1620,10 @@ export default function SessionsPage() {
             <div className="form-row">
 
               <label>
-                Rayon
+                {t(
+                  "sessions.radius"
+                )}
+
                 {subscription.premium &&
                   " ⭐"}
               </label>
@@ -1503,9 +1709,9 @@ export default function SessionsPage() {
               }}
             />
 
-            Afficher uniquement les
-            sessions avec des places
-            disponibles
+            {t(
+              "sessions.availableOnly"
+            )}
 
           </label>
 
@@ -1516,8 +1722,12 @@ export default function SessionsPage() {
               type="submit"
             >
               {searchLoading
-                ? "Recherche..."
-                : "Rechercher"}
+                ? t(
+                    "sessions.searchLoading"
+                  )
+                : t(
+                    "common.search"
+                  )}
             </button>
 
             <button
@@ -1531,10 +1741,16 @@ export default function SessionsPage() {
               }
             >
               {locationLoading
-                ? "Localisation..."
+                ? t(
+                    "sessions.locationLoading"
+                  )
                 : userLocation
-                ? "📍 Position activée"
-                : "📍 Utiliser ma position"}
+                ? t(
+                    "sessions.locationActive"
+                  )
+                : t(
+                    "sessions.location"
+                  )}
             </button>
 
             <button
@@ -1544,7 +1760,9 @@ export default function SessionsPage() {
                 resetSearch
               }
             >
-              Réinitialiser
+              {t(
+                "common.reset"
+              )}
             </button>
 
           </div>
@@ -1562,8 +1780,12 @@ export default function SessionsPage() {
             }
           >
             {showCreateForm
-              ? "Fermer le formulaire"
-              : "Créer une session"}
+              ? t(
+                  "sessions.closeForm"
+                )
+              : t(
+                  "sessions.create"
+                )}
           </button>
 
         </div>
@@ -1577,9 +1799,6 @@ export default function SessionsPage() {
             }
           >
 
-            {/*
-             * Nouveau compteur permanent.
-             */}
             <div
               style={{
                 padding:
@@ -1612,18 +1831,28 @@ export default function SessionsPage() {
             >
 
               <div>
+
                 {subscription.premium
-                  ? "⭐ PREMIUM"
-                  : "STANDARD"}
+                  ? t(
+                      "sessions.premium"
+                    )
+                  : t(
+                      "sessions.standard"
+                    )}
+
                 {" — "}
-                {
-                  activeCreatedSessions
-                }
-                {" / "}
-                {
-                  maxActiveSessions
-                }
-                {" sessions actives créées"}
+
+                {t(
+                  "sessions.activeCreated",
+                  {
+                    current:
+                      activeCreatedSessions,
+
+                    max:
+                      maxActiveSessions,
+                  }
+                )}
+
               </div>
 
               <div
@@ -1635,11 +1864,16 @@ export default function SessionsPage() {
                     600,
                 }}
               >
-                Capacité maximale :{" "}
-                {
-                  subscription.maxCapacity
-                }{" "}
-                participants par session
+
+                {t(
+                  "sessions.maxCapacity",
+                  {
+                    count:
+                      subscription
+                        .maxCapacity,
+                  }
+                )}
+
               </div>
 
               {sessionLimitReached && (
@@ -1651,8 +1885,12 @@ export default function SessionsPage() {
                   }}
                 >
                   {subscription.premium
-                    ? `Limite Premium atteinte. Vous devez attendre la fin d'une session ou en annuler une avant d'en créer une nouvelle.`
-                    : "Limite Standard atteinte. Premium permet jusqu'à 10 sessions actives simultanément."}
+                    ? t(
+                        "sessions.premiumLimit"
+                      )
+                    : t(
+                        "sessions.standardLimit"
+                      )}
                 </div>
               )}
 
@@ -1661,7 +1899,9 @@ export default function SessionsPage() {
             <div className="form-row">
 
               <label>
-                Salle de sport
+                {t(
+                  "sessions.gymLabel"
+                )}
               </label>
 
               <select
@@ -1704,7 +1944,9 @@ export default function SessionsPage() {
             <div className="form-row">
 
               <label>
-                Titre
+                {t(
+                  "sessions.titleLabel"
+                )}
               </label>
 
               <input
@@ -1728,12 +1970,15 @@ export default function SessionsPage() {
             <div className="form-row">
 
               <label>
-                Activité
+                {t(
+                  "sessions.activity"
+                )}
               </label>
 
               <select
                 value={
-                  newSession.activityType
+                  newSession
+                    .activityType
                 }
                 onChange={(event) =>
                   setNewSession({
@@ -1759,9 +2004,10 @@ export default function SessionsPage() {
                         activity
                       }
                     >
-                      {
-                        activity
-                      }
+                      {activityLabel(
+                        activity,
+                        t
+                      )}
                     </option>
                   )
                 )}
@@ -1773,7 +2019,9 @@ export default function SessionsPage() {
             <div className="form-row">
 
               <label>
-                Description
+                {t(
+                  "sessions.descriptionLabel"
+                )}
               </label>
 
               <textarea
@@ -1798,7 +2046,9 @@ export default function SessionsPage() {
               <div className="form-row">
 
                 <label>
-                  Date et heure
+                  {t(
+                    "sessions.start"
+                  )}
                 </label>
 
                 <input
@@ -1822,7 +2072,9 @@ export default function SessionsPage() {
               <div className="form-row">
 
                 <label>
-                  Durée
+                  {t(
+                    "sessions.duration"
+                  )}
                 </label>
 
                 <input
@@ -1848,14 +2100,17 @@ export default function SessionsPage() {
               <div className="form-row">
 
                 <label>
-                  Capacité
+                  {t(
+                    "sessions.capacity"
+                  )}
                 </label>
 
                 <input
                   type="number"
                   min="2"
                   max={
-                    subscription.maxCapacity ||
+                    subscription
+                      .maxCapacity ||
                     5
                   }
                   value={
@@ -1877,7 +2132,9 @@ export default function SessionsPage() {
               <div className="form-row">
 
                 <label>
-                  Visibilité
+                  {t(
+                    "sessions.visibility"
+                  )}
                 </label>
 
                 <select
@@ -1896,11 +2153,15 @@ export default function SessionsPage() {
                 >
 
                   <option value="PUBLIC">
-                    PUBLIC
+                    {t(
+                      "sessions.public"
+                    )}
                   </option>
 
                   <option value="PRIVATE">
-                    PRIVATE
+                    {t(
+                      "sessions.private"
+                    )}
                   </option>
 
                 </select>
@@ -1928,15 +2189,32 @@ export default function SessionsPage() {
               }
             >
               {sessionLimitReached
-                ? `Limite atteinte (${activeCreatedSessions}/${maxActiveSessions})`
-                : "Enregistrer la session"}
+                ? t(
+                    "sessions.limitButton",
+                    {
+                      current:
+                        activeCreatedSessions,
+
+                      max:
+                        maxActiveSessions,
+                    }
+                  )
+                : t(
+                    "sessions.save"
+                  )}
             </button>
 
           </form>
         )}
 
         <p className="empty-text">
-          {sessions.length} session(s) trouvée(s)
+          {t(
+            "sessions.found",
+            {
+              count:
+                sessions.length,
+            }
+          )}
         </p>
 
         {sessions.length ===
@@ -1945,11 +2223,15 @@ export default function SessionsPage() {
           <section className="session-card">
 
             <h3>
-              Aucune session trouvée
+              {t(
+                "sessions.none"
+              )}
             </h3>
 
             <p className="description">
-              Modifiez vos filtres.
+              {t(
+                "sessions.changeFilters"
+              )}
             </p>
 
           </section>
@@ -1971,25 +2253,31 @@ export default function SessionsPage() {
                   <div className="session-card-header">
 
                     <span className="badge">
-                      {
-                        session.status
-                      }
+                      {t(
+                        `status.${session.status}`
+                      )}
                     </span>
 
                     {session
                       .premiumHighlighted ? (
 
                       <span className="capacity">
-                        ⭐ PREMIUM
+                        {t(
+                          "sessions.premium"
+                        )}
                       </span>
 
                     ) : (
 
                       <span className="capacity">
-                        {
-                          session.availablePlaces
-                        }{" "}
-                        place(s) libre(s)
+                        {t(
+                          "sessions.places",
+                          {
+                            count:
+                              session
+                                .availablePlaces,
+                          }
+                        )}
                       </span>
                     )}
 
@@ -2002,14 +2290,17 @@ export default function SessionsPage() {
                   </h3>
 
                   <p className="activity">
-                    {
-                      session.activityType
-                    }
+                    {activityLabel(
+                      session.activityType,
+                      t
+                    )}
                   </p>
 
                   <p className="description">
                     {session.description ||
-                      "Aucune description."}
+                      t(
+                        "sessions.noDescription"
+                      )}
                   </p>
 
                   <div className="session-meta">
@@ -2028,7 +2319,8 @@ export default function SessionsPage() {
                         🧭{" "}
                         {formatDistance(
                           session
-                            .distanceKm
+                            .distanceKm,
+                          t
                         )}
                       </span>
                     )}
@@ -2036,7 +2328,8 @@ export default function SessionsPage() {
                     <span>
                       🕒{" "}
                       {formatDate(
-                        session.startAt
+                        session.startAt,
+                        locale
                       )}
                     </span>
 
@@ -2045,13 +2338,16 @@ export default function SessionsPage() {
                       {
                         session.durationMin
                       }{" "}
-                      min
+                      {t(
+                        "common.minutes"
+                      )}
                     </span>
 
                     <span>
                       👥{" "}
                       {
-                        session.participantCount
+                        session
+                          .participantCount
                       }{" "}
                       /{" "}
                       {
@@ -2069,7 +2365,9 @@ export default function SessionsPage() {
                       )
                     }
                   >
-                    Voir détails
+                    {t(
+                      "sessions.details"
+                    )}
                   </button>
 
                 </article>
@@ -2085,16 +2383,17 @@ export default function SessionsPage() {
 }
 
 function formatDate(
-  value
+  value,
+  locale
 ) {
   if (!value) {
-    return "Date inconnue";
+    return "";
   }
 
   return new Date(
     value
   ).toLocaleString(
-    "fr-BE",
+    locale,
     {
       day:
         "2-digit",
@@ -2115,12 +2414,15 @@ function formatDate(
 }
 
 function formatDistance(
-  distanceKm
+  distanceKm,
+  t
 ) {
   if (
     distanceKm == null
   ) {
-    return "Distance inconnue";
+    return t(
+      "common.unknown"
+    );
   }
 
   if (
@@ -2134,4 +2436,19 @@ function formatDistance(
   return `${distanceKm.toFixed(
     1
   )} km`;
+}
+
+function activityLabel(
+  activity,
+  t
+) {
+  const key =
+    `activity.${activity}`;
+
+  const translated =
+    t(key);
+
+  return translated === key
+    ? activity
+    : translated;
 }

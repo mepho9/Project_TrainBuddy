@@ -1,90 +1,248 @@
-import { useState } from "react";
-import api from "../api/axios";
+import { useState }
+  from "react";
 
-export default function LoginPage({ onLoginSuccess, onGoToRegister }) {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [message, setMessage] = useState("");
-  const [isSuccess, setIsSuccess] = useState(false);
+import api
+  from "../api/axios";
 
-  const handleLogin = async (e) => {
-    e.preventDefault();
-    setMessage("");
+import LanguageSwitcher
+  from "../components/LanguageSwitcher";
 
-    try {
-      const response = await api.post("/auth/login", {
-        email,
-        password,
-      });
+import { useLanguage }
+  from "../i18n/LanguageContext";
 
-      localStorage.setItem("token", response.data.token);
-      localStorage.setItem("email", response.data.email);
-      localStorage.setItem("role", response.data.role);
+export default function LoginPage({
+  onLoginSuccess,
+  onGoToRegister,
+}) {
+  const { t } =
+    useLanguage();
 
-      setIsSuccess(true);
-      setMessage("Connexion réussie !");
-      onLoginSuccess();
-    } catch (error) {
-      setIsSuccess(false);
-      setMessage("Erreur de connexion");
-      console.error(error);
-    }
-  };
+  const [email, setEmail] =
+    useState("");
+
+  const [
+    password,
+    setPassword,
+  ] = useState("");
+
+  const [
+    message,
+    setMessage,
+  ] = useState("");
+
+  const [
+    isSuccess,
+    setIsSuccess,
+  ] = useState(false);
+
+  const handleLogin =
+    async (event) => {
+      event.preventDefault();
+
+      setMessage("");
+
+      try {
+        const response =
+          await api.post(
+            "/auth/login",
+            {
+              email,
+              password,
+            }
+          );
+
+        localStorage.setItem(
+          "token",
+          response.data.token
+        );
+
+        localStorage.setItem(
+          "email",
+          response.data.email
+        );
+
+        localStorage.setItem(
+          "role",
+          response.data.role
+        );
+
+        setIsSuccess(true);
+
+        setMessage(
+          t(
+            "auth.loginSuccess"
+          )
+        );
+
+        onLoginSuccess();
+
+      } catch (error) {
+        setIsSuccess(false);
+
+        setMessage(
+          t(
+            "auth.loginError"
+          )
+        );
+
+        console.error(
+          error
+        );
+      }
+    };
 
   return (
     <div className="auth-page">
+
       <div className="auth-card">
+
+        <div
+          style={{
+            display: "flex",
+            justifyContent:
+              "flex-end",
+            marginBottom:
+              "10px",
+          }}
+        >
+          <LanguageSwitcher />
+        </div>
+
         <div className="brand">
-          <div className="brand-icon">🏋️</div>
+
+          <div className="brand-icon">
+            🏋️
+          </div>
+
           <h1>
             Train<span>Buddy</span>
           </h1>
-          <p>Connectez-vous à votre compte</p>
+
+          <p>
+            {t(
+              "auth.login.subtitle"
+            )}
+          </p>
+
         </div>
 
-        <form onSubmit={handleLogin} className="auth-form">
-          <label>Adresse e-mail</label>
+        <form
+          onSubmit={
+            handleLogin
+          }
+          className="auth-form"
+        >
+
+          <label>
+            {t(
+              "auth.email"
+            )}
+          </label>
+
           <div className="input-group">
-            <span>✉️</span>
+
+            <span>
+              ✉️
+            </span>
+
             <input
               type="email"
               placeholder="user@example.com"
               value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              onChange={(event) =>
+                setEmail(
+                  event.target.value
+                )
+              }
+              required
             />
+
           </div>
 
-          <label>Mot de passe</label>
+          <label>
+            {t(
+              "auth.password"
+            )}
+          </label>
+
           <div className="input-group">
-            <span>🔒</span>
+
+            <span>
+              🔒
+            </span>
+
             <input
               type="password"
-              placeholder="Votre mot de passe"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
+              placeholder={t(
+                "auth.passwordPlaceholder"
+              )}
+              value={
+                password
+              }
+              onChange={(event) =>
+                setPassword(
+                  event.target.value
+                )
+              }
+              required
             />
+
           </div>
 
-          <button type="submit">Se connecter</button>
+          <button type="submit">
+            {t(
+              "auth.login"
+            )}
+          </button>
+
         </form>
 
         {message && (
-          <div className={isSuccess ? "alert success" : "alert error"}>
+          <div
+            className={
+              isSuccess
+                ? "alert success"
+                : "alert error"
+            }
+          >
             {message}
           </div>
         )}
 
         <div className="auth-footer">
-          <span>Pas encore de compte ?</span>
-          <button className="link-btn" onClick={onGoToRegister}>
-            Créer un compte
+
+          <span>
+            {t(
+              "auth.noAccount"
+            )}
+          </span>
+
+          <button
+            className="link-btn"
+            onClick={
+              onGoToRegister
+            }
+          >
+            {t(
+              "auth.createAccount"
+            )}
           </button>
+
         </div>
+
       </div>
 
       <p className="copyright">
-        © 2026 <strong>TrainBuddy</strong>. Tous droits réservés.
+        © 2026{" "}
+        <strong>
+          TrainBuddy
+        </strong>
+        .{" "}
+        {t(
+          "auth.rights"
+        )}
       </p>
+
     </div>
   );
 }

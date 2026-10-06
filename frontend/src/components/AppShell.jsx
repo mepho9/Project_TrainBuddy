@@ -1,3 +1,9 @@
+import LanguageSwitcher
+  from "./LanguageSwitcher";
+
+import { useLanguage }
+  from "../i18n/LanguageContext";
+
 export default function AppShell({
   activePage,
   onChangePage,
@@ -5,8 +11,8 @@ export default function AppShell({
   role,
   children,
 }) {
-  const isAdmin =
-    role === "ADMIN";
+  const { t } =
+    useLanguage();
 
   return (
     <div className="app-page">
@@ -20,17 +26,14 @@ export default function AppShell({
           </div>
 
           <h1>
-            Train
-            <span>
-              Buddy
-            </span>
+            Train<span>Buddy</span>
           </h1>
 
         </div>
 
         <nav className="nav-tabs">
 
-          {isAdmin ? (
+          {role === "ADMIN" ? (
 
             <button
               className={
@@ -45,11 +48,12 @@ export default function AppShell({
                 )
               }
             >
-              Administration
+              {t(
+                "nav.admin"
+              )}
             </button>
 
           ) : (
-
             <>
               <button
                 className={
@@ -64,7 +68,9 @@ export default function AppShell({
                   )
                 }
               >
-                Sessions
+                {t(
+                  "nav.sessions"
+                )}
               </button>
 
               <button
@@ -80,7 +86,9 @@ export default function AppShell({
                   )
                 }
               >
-                Salles
+                {t(
+                  "nav.gyms"
+                )}
               </button>
 
               <button
@@ -96,22 +104,36 @@ export default function AppShell({
                   )
                 }
               >
-                Profil
+                {t(
+                  "nav.profile"
+                )}
               </button>
             </>
-
           )}
 
         </nav>
 
-        <button
-          className="logout-btn"
-          onClick={
-            onLogout
-          }
+        <div
+          style={{
+            display: "flex",
+            gap: "10px",
+            alignItems:
+              "center",
+          }}
         >
-          Déconnexion
-        </button>
+          <LanguageSwitcher />
+
+          <button
+            className="logout-btn"
+            onClick={
+              onLogout
+            }
+          >
+            {t(
+              "nav.logout"
+            )}
+          </button>
+        </div>
 
       </header>
 

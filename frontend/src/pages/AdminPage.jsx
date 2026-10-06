@@ -4,10 +4,14 @@ import {
   useState,
 } from "react";
 
-import api from "../api/axios";
+import api
+  from "../api/axios";
 
 import AdminReportsSection
   from "../components/AdminReportsSection";
+
+import { useLanguage }
+  from "../i18n/LanguageContext";
 
 const EMPTY_GYM = {
   name: "",
@@ -18,31 +22,50 @@ const EMPTY_GYM = {
 };
 
 export default function AdminPage() {
+  const { t } =
+    useLanguage();
+
   const currentEmail =
     localStorage.getItem(
       "email"
     );
 
-  const [activeTab, setActiveTab] =
-    useState("users");
+  const [
+    activeTab,
+    setActiveTab,
+  ] = useState(
+    "users"
+  );
 
-  const [users, setUsers] =
-    useState([]);
+  const [
+    users,
+    setUsers,
+  ] = useState([]);
 
-  const [gyms, setGyms] =
-    useState([]);
+  const [
+    gyms,
+    setGyms,
+  ] = useState([]);
 
-  const [sessions, setSessions] =
-    useState([]);
+  const [
+    sessions,
+    setSessions,
+  ] = useState([]);
 
-  const [reports, setReports] =
-    useState([]);
+  const [
+    reports,
+    setReports,
+  ] = useState([]);
 
-  const [loading, setLoading] =
-    useState(true);
+  const [
+    loading,
+    setLoading,
+  ] = useState(true);
 
-  const [message, setMessage] =
-    useState("");
+  const [
+    message,
+    setMessage,
+  ] = useState("");
 
   const [
     userSearch,
@@ -59,8 +82,12 @@ export default function AdminPage() {
     setSessionStatus,
   ] = useState("");
 
-  const [gymForm, setGymForm] =
-    useState(EMPTY_GYM);
+  const [
+    gymForm,
+    setGymForm,
+  ] = useState(
+    EMPTY_GYM
+  );
 
   const [
     editingGymId,
@@ -121,35 +148,98 @@ export default function AdminPage() {
       );
     };
 
-  const fetchEverything =
-    async () => {
-      setLoading(true);
+  /*
+   * Chargement initial directement depuis
+   * les API.
+   *
+   * Les setState arrivent uniquement après
+   * les await et non synchroniquement dans
+   * le corps du useEffect.
+   */
+  useEffect(() => {
+    let cancelled =
+      false;
 
+    void (async () => {
       try {
-        await Promise.all([
-          fetchUsers(),
-          fetchGyms(),
-          fetchSessions(),
-          fetchReports(),
-        ]);
+        const [
+          usersResponse,
+          gymsResponse,
+          sessionsResponse,
+          reportsResponse,
+        ] =
+          await Promise.all([
+            api.get(
+              "/admin/users"
+            ),
+
+            api.get(
+              "/admin/gyms"
+            ),
+
+            api.get(
+              "/admin/sessions"
+            ),
+
+            api.get(
+              "/admin/reports"
+            ),
+          ]);
+
+        if (cancelled) {
+          return;
+        }
+
+        setUsers(
+          usersResponse.data
+        );
+
+        setGyms(
+          gymsResponse.data
+        );
+
+        setSessions(
+          sessionsResponse.data
+        );
+
+        setReports(
+          reportsResponse.data
+        );
+
       } catch (error) {
+        if (cancelled) {
+          return;
+        }
+
         setMessage(
           error.response?.data
             ?.message ||
-            "Impossible de charger l'administration."
+            t(
+              "admin.loadError"
+            )
         );
 
         console.error(
           error
         );
+
       } finally {
-        setLoading(false);
+        if (
+          !cancelled
+        ) {
+          setLoading(
+            false
+          );
+        }
       }
+    })();
+
+    return () => {
+      cancelled =
+        true;
     };
 
-  useEffect(() => {
-    fetchEverything();
-  }, []);
+  }, [t]);
 
   /*
    * =========================
@@ -161,7 +251,13 @@ export default function AdminPage() {
     async (user) => {
       const confirmed =
         window.confirm(
-          `Bannir ${user.email} ?\n\nIl sera retiré de ses sessions et ses futures sessions créées seront annulées.`
+          t(
+            "admin.banConfirm",
+            {
+              email:
+                user.email,
+            }
+          )
         );
 
       if (!confirmed) {
@@ -174,7 +270,13 @@ export default function AdminPage() {
         );
 
         setMessage(
-          `${user.email} a été banni.`
+          t(
+            "admin.banned",
+            {
+              email:
+                user.email,
+            }
+          )
         );
 
         await Promise.all([
@@ -182,14 +284,19 @@ export default function AdminPage() {
           fetchSessions(),
           fetchReports(),
         ]);
+
       } catch (error) {
         setMessage(
           error.response?.data
             ?.message ||
-            "Impossible de bannir cet utilisateur."
+            t(
+              "admin.banError"
+            )
         );
 
-        console.error(error);
+        console.error(
+          error
+        );
       }
     };
 
@@ -197,7 +304,13 @@ export default function AdminPage() {
     async (user) => {
       const confirmed =
         window.confirm(
-          `Débannir ${user.email} ?`
+          t(
+            "admin.unbanConfirm",
+            {
+              email:
+                user.email,
+            }
+          )
         );
 
       if (!confirmed) {
@@ -210,21 +323,32 @@ export default function AdminPage() {
         );
 
         setMessage(
-          `${user.email} a été débanni.`
+          t(
+            "admin.unbanned",
+            {
+              email:
+                user.email,
+            }
+          )
         );
 
         await Promise.all([
           fetchUsers(),
           fetchReports(),
         ]);
+
       } catch (error) {
         setMessage(
           error.response?.data
             ?.message ||
-            "Impossible de débannir cet utilisateur."
+            t(
+              "admin.unbanError"
+            )
         );
 
-        console.error(error);
+        console.error(
+          error
+        );
       }
     };
 
@@ -266,15 +390,20 @@ export default function AdminPage() {
       };
 
       try {
-        if (editingGymId) {
+        if (
+          editingGymId
+        ) {
           await api.put(
             `/admin/gyms/${editingGymId}`,
             payload
           );
 
           setMessage(
-            "Salle modifiée avec succès."
+            t(
+              "admin.gymUpdated"
+            )
           );
+
         } else {
           await api.post(
             "/admin/gyms",
@@ -282,7 +411,9 @@ export default function AdminPage() {
           );
 
           setMessage(
-            "Salle créée avec succès."
+            t(
+              "admin.gymCreated"
+            )
           );
         }
 
@@ -295,14 +426,19 @@ export default function AdminPage() {
         );
 
         await fetchGyms();
+
       } catch (error) {
         setMessage(
           error.response?.data
             ?.message ||
-            "Impossible d'enregistrer la salle."
+            t(
+              "admin.gymError"
+            )
         );
 
-        console.error(error);
+        console.error(
+          error
+        );
       }
     };
 
@@ -334,7 +470,8 @@ export default function AdminPage() {
 
       window.scrollTo({
         top: 0,
-        behavior: "smooth",
+        behavior:
+          "smooth",
       });
     };
 
@@ -356,9 +493,15 @@ export default function AdminPage() {
 
       const confirmed =
         window.confirm(
-          newStatus
-            ? `Réactiver ${gym.name} ?`
-            : `Désactiver ${gym.name} ? Elle ne sera plus proposée pour les nouvelles sessions.`
+          `${
+            newStatus
+              ? t(
+                  "admin.enable"
+                )
+              : t(
+                  "admin.disable"
+                )
+          } ${gym.name} ?`
         );
 
       if (!confirmed) {
@@ -379,19 +522,28 @@ export default function AdminPage() {
 
         setMessage(
           newStatus
-            ? "Salle réactivée."
-            : "Salle désactivée."
+            ? t(
+                "admin.gymEnabled"
+              )
+            : t(
+                "admin.gymDisabled"
+              )
         );
 
         await fetchGyms();
+
       } catch (error) {
         setMessage(
           error.response?.data
             ?.message ||
-            "Impossible de modifier l'état de la salle."
+            t(
+              "admin.gymStateError"
+            )
         );
 
-        console.error(error);
+        console.error(
+          error
+        );
       }
     };
 
@@ -405,7 +557,13 @@ export default function AdminPage() {
     async (session) => {
       const confirmed =
         window.confirm(
-          `Retirer la session "${session.title}" ?\n\nElle passera au statut CANCELLED et ne sera plus visible dans la recherche publique.`
+          t(
+            "admin.removeSessionConfirm",
+            {
+              title:
+                session.title,
+            }
+          )
         );
 
       if (!confirmed) {
@@ -418,21 +576,28 @@ export default function AdminPage() {
         );
 
         setMessage(
-          "La session a été retirée."
+          t(
+            "admin.sessionRemoved"
+          )
         );
 
         await Promise.all([
           fetchSessions(),
           fetchReports(),
         ]);
+
       } catch (error) {
         setMessage(
           error.response?.data
             ?.message ||
-            "Impossible de retirer cette session."
+            t(
+              "admin.sessionRemoveError"
+            )
         );
 
-        console.error(error);
+        console.error(
+          error
+        );
       }
     };
 
@@ -450,18 +615,25 @@ export default function AdminPage() {
         );
 
         setMessage(
-          "Signalement pris en charge."
+          t(
+            "admin.reviewSuccess"
+          )
         );
 
         await fetchReports();
+
       } catch (error) {
         setMessage(
           error.response?.data
             ?.message ||
-            "Impossible de prendre ce signalement en charge."
+            t(
+              "admin.reviewError"
+            )
         );
 
-        console.error(error);
+        console.error(
+          error
+        );
       }
     };
 
@@ -469,7 +641,9 @@ export default function AdminPage() {
     async (report) => {
       const confirmed =
         window.confirm(
-          "Fermer ce signalement sans sanction ?"
+          `${t(
+            "admin.ignore"
+          )} ?`
         );
 
       if (!confirmed) {
@@ -482,18 +656,25 @@ export default function AdminPage() {
         );
 
         setMessage(
-          "Signalement fermé sans sanction."
+          t(
+            "admin.ignoreSuccess"
+          )
         );
 
         await fetchReports();
+
       } catch (error) {
         setMessage(
           error.response?.data
             ?.message ||
-            "Impossible de fermer ce signalement."
+            t(
+              "admin.ignoreError"
+            )
         );
 
-        console.error(error);
+        console.error(
+          error
+        );
       }
     };
 
@@ -501,7 +682,14 @@ export default function AdminPage() {
     async (report) => {
       const confirmed =
         window.confirm(
-          `Retirer la session "${report.targetSessionTitle}" à la suite de ce signalement ?`
+          t(
+            "admin.removeSessionConfirm",
+            {
+              title:
+                report
+                  .targetSessionTitle,
+            }
+          )
         );
 
       if (!confirmed) {
@@ -514,21 +702,28 @@ export default function AdminPage() {
         );
 
         setMessage(
-          "Session retirée et signalement fermé."
+          t(
+            "admin.cancelReportSuccess"
+          )
         );
 
         await Promise.all([
           fetchReports(),
           fetchSessions(),
         ]);
+
       } catch (error) {
         setMessage(
           error.response?.data
             ?.message ||
-            "Impossible de retirer cette session."
+            t(
+              "admin.sessionRemoveError"
+            )
         );
 
-        console.error(error);
+        console.error(
+          error
+        );
       }
     };
 
@@ -536,7 +731,14 @@ export default function AdminPage() {
     async (report) => {
       const confirmed =
         window.confirm(
-          `Bannir ${report.targetUserEmail} à la suite de ce signalement ?`
+          t(
+            "admin.banConfirm",
+            {
+              email:
+                report
+                  .targetUserEmail,
+            }
+          )
         );
 
       if (!confirmed) {
@@ -549,7 +751,9 @@ export default function AdminPage() {
         );
 
         setMessage(
-          "Utilisateur banni et signalement fermé."
+          t(
+            "admin.banReportSuccess"
+          )
         );
 
         await Promise.all([
@@ -557,14 +761,19 @@ export default function AdminPage() {
           fetchUsers(),
           fetchSessions(),
         ]);
+
       } catch (error) {
         setMessage(
           error.response?.data
             ?.message ||
-            "Impossible de bannir cet utilisateur."
+            t(
+              "admin.banError"
+            )
         );
 
-        console.error(error);
+        console.error(
+          error
+        );
       }
     };
 
@@ -589,8 +798,11 @@ export default function AdminPage() {
         (user) =>
           user.email
             .toLowerCase()
-            .includes(query)
+            .includes(
+              query
+            )
       );
+
     }, [
       users,
       userSearch,
@@ -607,21 +819,25 @@ export default function AdminPage() {
         (session) => {
           const matchesSearch =
             !query ||
+
             session.title
               .toLowerCase()
               .includes(
                 query
               ) ||
+
             session.activityType
               .toLowerCase()
               .includes(
                 query
               ) ||
+
             session.gymName
               .toLowerCase()
               .includes(
                 query
               ) ||
+
             session.creatorEmail
               .toLowerCase()
               .includes(
@@ -639,6 +855,7 @@ export default function AdminPage() {
           );
         }
       );
+
     }, [
       sessions,
       sessionSearch,
@@ -651,17 +868,21 @@ export default function AdminPage() {
       <section className="hero-section">
 
         <p className="eyebrow">
-          Back-office
+          {t(
+            "admin.eyebrow"
+          )}
         </p>
 
         <h2>
-          Administration TrainBuddy
+          {t(
+            "admin.title"
+          )}
         </h2>
 
         <p>
-          Gérez les utilisateurs,
-          les salles, les sessions et
-          les signalements de la plateforme.
+          {t(
+            "admin.description"
+          )}
         </p>
 
       </section>
@@ -696,8 +917,10 @@ export default function AdminPage() {
             )
           }
         >
-          Utilisateurs (
-          {users.length})
+          {t(
+            "admin.users"
+          )}{" "}
+          ({users.length})
         </button>
 
         <button
@@ -713,8 +936,10 @@ export default function AdminPage() {
             )
           }
         >
-          Salles (
-          {gyms.length})
+          {t(
+            "admin.gyms"
+          )}{" "}
+          ({gyms.length})
         </button>
 
         <button
@@ -730,8 +955,10 @@ export default function AdminPage() {
             )
           }
         >
-          Sessions (
-          {sessions.length})
+          {t(
+            "admin.sessions"
+          )}{" "}
+          ({sessions.length})
         </button>
 
         <button
@@ -747,12 +974,17 @@ export default function AdminPage() {
             )
           }
         >
-          Signalements (
-          {reports.filter(
-            (report) =>
-              report.status !==
-              "CLOSED"
-          ).length}
+          {t(
+            "admin.reports"
+          )}{" "}
+          (
+          {
+            reports.filter(
+              (report) =>
+                report.status !==
+                "CLOSED"
+            ).length
+          }
           )
         </button>
 
@@ -763,12 +995,15 @@ export default function AdminPage() {
         <section className="session-card">
 
           <h3>
-            Chargement...
+            {t(
+              "common.loading"
+            )}
           </h3>
 
           <p className="description">
-            Récupération des données
-            d'administration.
+            {t(
+              "common.loading"
+            )}
           </p>
 
         </section>
@@ -778,6 +1013,7 @@ export default function AdminPage() {
 
           {activeTab ===
             "users" && (
+
             <UsersSection
               users={
                 filteredUsers
@@ -802,8 +1038,11 @@ export default function AdminPage() {
 
           {activeTab ===
             "gyms" && (
+
             <GymsSection
-              gyms={gyms}
+              gyms={
+                gyms
+              }
               gymForm={
                 gymForm
               }
@@ -830,6 +1069,7 @@ export default function AdminPage() {
 
           {activeTab ===
             "sessions" && (
+
             <SessionsSection
               sessions={
                 filteredSessions
@@ -854,8 +1094,11 @@ export default function AdminPage() {
 
           {activeTab ===
             "reports" && (
+
             <AdminReportsSection
-              reports={reports}
+              reports={
+                reports
+              }
               onReview={
                 reviewReport
               }
@@ -886,19 +1129,29 @@ function UsersSection({
   onBan,
   onUnban,
 }) {
+  const {
+    t,
+    locale,
+  } = useLanguage();
+
   return (
     <>
+
       <section className="create-session-form">
 
         <div className="form-row">
 
           <label>
-            Rechercher un utilisateur
+            {t(
+              "admin.searchUser"
+            )}
           </label>
 
           <input
             type="text"
-            placeholder="Adresse e-mail..."
+            placeholder={t(
+              "admin.emailPlaceholder"
+            )}
             value={
               userSearch
             }
@@ -927,15 +1180,25 @@ function UsersSection({
               "ADMIN";
 
             return (
+
               <article
                 className="session-card"
-                key={user.id}
+                key={
+                  user.id
+                }
               >
 
                 <div className="session-card-header">
 
                   <span className="badge">
-                    {user.role}
+                    {user.role ===
+                    "ADMIN"
+                      ? t(
+                          "admin.administrator"
+                        )
+                      : t(
+                          "common.member"
+                        )}
                   </span>
 
                   <span
@@ -948,37 +1211,68 @@ function UsersSection({
                     }}
                   >
                     {user.banned
-                      ? "BANNI"
-                      : "ACTIF"}
+                      ? t(
+                          "common.inactive"
+                        )
+                      : t(
+                          "common.active"
+                        )}
                   </span>
 
                 </div>
 
                 <h3>
-                  {user.email}
+                  {
+                    user.email
+                  }
                 </h3>
 
                 <div className="session-meta">
 
                   <span>
-                    👤 Rôle :{" "}
-                    {user.role}
+                    👤{" "}
+                    {t(
+                      "admin.role"
+                    )}
+                    :{" "}
+                    {user.role ===
+                    "ADMIN"
+                      ? t(
+                          "admin.administrator"
+                        )
+                      : t(
+                          "common.member"
+                        )}
                   </span>
 
                   <span>
-                    📅 Inscription :{" "}
+                    📅{" "}
+                    {t(
+                      "admin.registration"
+                    )}
+                    :{" "}
                     {formatDate(
-                      user.createdAt
+                      user.createdAt,
+                      locale,
+                      t
                     )}
                   </span>
 
                   <span>
-                    🕒 Dernière connexion :{" "}
+                    🕒{" "}
+                    {t(
+                      "admin.lastLogin"
+                    )}
+                    :{" "}
                     {user.lastLoginAt
                       ? formatDate(
-                          user.lastLoginAt
+                          user.lastLoginAt,
+                          locale,
+                          t
                         )
-                      : "Jamais"}
+                      : t(
+                          "admin.never"
+                        )}
                   </span>
 
                 </div>
@@ -989,7 +1283,9 @@ function UsersSection({
                     className="secondary-btn"
                     disabled
                   >
-                    Votre compte
+                    {t(
+                      "admin.yourAccount"
+                    )}
                   </button>
 
                 ) : isAdmin ? (
@@ -998,7 +1294,9 @@ function UsersSection({
                     className="secondary-btn"
                     disabled
                   >
-                    Administrateur
+                    {t(
+                      "admin.administrator"
+                    )}
                   </button>
 
                 ) : user.banned ? (
@@ -1011,7 +1309,9 @@ function UsersSection({
                       )
                     }
                   >
-                    Débannir
+                    {t(
+                      "admin.unban"
+                    )}
                   </button>
 
                 ) : (
@@ -1031,7 +1331,9 @@ function UsersSection({
                       )
                     }
                   >
-                    Bannir
+                    {t(
+                      "admin.ban"
+                    )}
                   </button>
                 )}
 
@@ -1041,6 +1343,7 @@ function UsersSection({
         )}
 
       </section>
+
     </>
   );
 }
@@ -1055,11 +1358,17 @@ function GymsSection({
   onCancelEdit,
   onToggle,
 }) {
+  const { t } =
+    useLanguage();
+
   return (
     <>
+
       <form
         className="create-session-form"
-        onSubmit={onSave}
+        onSubmit={
+          onSave
+        }
       >
 
         <h3
@@ -1068,8 +1377,12 @@ function GymsSection({
           }}
         >
           {editingGymId
-            ? "Modifier la salle"
-            : "Ajouter une salle"}
+            ? t(
+                "admin.editGym"
+              )
+            : t(
+                "admin.addGym"
+              )}
         </h3>
 
         <div className="form-grid">
@@ -1077,7 +1390,9 @@ function GymsSection({
           <div className="form-row">
 
             <label>
-              Nom
+              {t(
+                "admin.name"
+              )}
             </label>
 
             <input
@@ -1102,7 +1417,9 @@ function GymsSection({
           <div className="form-row">
 
             <label>
-              Type
+              {t(
+                "admin.type"
+              )}
             </label>
 
             <input
@@ -1128,7 +1445,9 @@ function GymsSection({
           <div className="form-row">
 
             <label>
-              Latitude
+              {t(
+                "admin.latitude"
+              )}
             </label>
 
             <input
@@ -1155,7 +1474,9 @@ function GymsSection({
           <div className="form-row">
 
             <label>
-              Longitude
+              {t(
+                "admin.longitude"
+              )}
             </label>
 
             <input
@@ -1184,7 +1505,9 @@ function GymsSection({
         <div className="form-row">
 
           <label>
-            Adresse
+            {t(
+              "admin.address"
+            )}
           </label>
 
           <input
@@ -1213,8 +1536,12 @@ function GymsSection({
             type="submit"
           >
             {editingGymId
-              ? "Enregistrer les modifications"
-              : "Ajouter la salle"}
+              ? t(
+                  "admin.saveChanges"
+                )
+              : t(
+                  "admin.add"
+                )}
           </button>
 
           {editingGymId && (
@@ -1226,9 +1553,10 @@ function GymsSection({
                 onCancelEdit
               }
             >
-              Annuler la modification
+              {t(
+                "admin.cancelEdit"
+              )}
             </button>
-
           )}
 
         </div>
@@ -1239,9 +1567,12 @@ function GymsSection({
 
         {gyms.map(
           (gym) => (
+
             <article
               className="gym-card"
-              key={gym.id}
+              key={
+                gym.id
+              }
             >
 
               <div className="gym-icon">
@@ -1251,15 +1582,21 @@ function GymsSection({
               <div>
 
                 <h3>
-                  {gym.name}
+                  {
+                    gym.name
+                  }
                 </h3>
 
                 <p className="activity">
-                  {gym.type}
+                  {
+                    gym.type
+                  }
                 </p>
 
                 <p className="description">
-                  {gym.address}
+                  {
+                    gym.address
+                  }
                 </p>
 
               </div>
@@ -1267,22 +1604,39 @@ function GymsSection({
               <div className="session-meta">
 
                 <span>
-                  État :{" "}
+                  {t(
+                    "admin.accountState"
+                  )}
+                  :{" "}
                   {gym.active
-                    ? "Active"
-                    : "Inactive"}
+                    ? t(
+                        "common.active"
+                      )
+                    : t(
+                        "common.inactive"
+                      )}
                 </span>
 
                 <span>
-                  Latitude :{" "}
+                  {t(
+                    "admin.latitude"
+                  )}
+                  :{" "}
                   {gym.latitude ??
-                    "Non définie"}
+                    t(
+                      "common.unknown"
+                    )}
                 </span>
 
                 <span>
-                  Longitude :{" "}
+                  {t(
+                    "admin.longitude"
+                  )}
+                  :{" "}
                   {gym.longitude ??
-                    "Non définie"}
+                    t(
+                      "common.unknown"
+                    )}
                 </span>
 
               </div>
@@ -1297,7 +1651,9 @@ function GymsSection({
                     )
                   }
                 >
-                  Modifier
+                  {t(
+                    "admin.edit"
+                  )}
                 </button>
 
                 <button
@@ -1320,8 +1676,12 @@ function GymsSection({
                   }
                 >
                   {gym.active
-                    ? "Désactiver"
-                    : "Réactiver"}
+                    ? t(
+                        "admin.disable"
+                      )
+                    : t(
+                        "admin.enable"
+                      )}
                 </button>
 
               </div>
@@ -1331,6 +1691,7 @@ function GymsSection({
         )}
 
       </section>
+
     </>
   );
 }
@@ -1343,8 +1704,14 @@ function SessionsSection({
   setSessionStatus,
   onCancel,
 }) {
+  const {
+    t,
+    locale,
+  } = useLanguage();
+
   return (
     <>
+
       <section className="create-session-form">
 
         <div className="form-grid">
@@ -1352,12 +1719,16 @@ function SessionsSection({
           <div className="form-row">
 
             <label>
-              Recherche
+              {t(
+                "common.search"
+              )}
             </label>
 
             <input
               type="text"
-              placeholder="Titre, salle, créateur..."
+              placeholder={t(
+                "admin.sessionSearch"
+              )}
               value={
                 sessionSearch
               }
@@ -1374,7 +1745,9 @@ function SessionsSection({
           <div className="form-row">
 
             <label>
-              Statut
+              {t(
+                "admin.status"
+              )}
             </label>
 
             <select
@@ -1390,19 +1763,27 @@ function SessionsSection({
             >
 
               <option value="">
-                Tous
+                {t(
+                  "common.all"
+                )}
               </option>
 
               <option value="UPCOMING">
-                UPCOMING
+                {t(
+                  "status.UPCOMING"
+                )}
               </option>
 
               <option value="COMPLETED">
-                COMPLETED
+                {t(
+                  "status.COMPLETED"
+                )}
               </option>
 
               <option value="CANCELLED">
-                CANCELLED
+                {t(
+                  "status.CANCELLED"
+                )}
               </option>
 
             </select>
@@ -1417,17 +1798,20 @@ function SessionsSection({
 
         {sessions.map(
           (session) => (
+
             <article
               className="session-card"
-              key={session.id}
+              key={
+                session.id
+              }
             >
 
               <div className="session-card-header">
 
                 <span className="badge">
-                  {
-                    session.status
-                  }
+                  {t(
+                    `status.${session.status}`
+                  )}
                 </span>
 
                 <span className="capacity">
@@ -1443,13 +1827,16 @@ function SessionsSection({
               </div>
 
               <h3>
-                {session.title}
+                {
+                  session.title
+                }
               </h3>
 
               <p className="activity">
-                {
-                  session.activityType
-                }
+                {activityLabel(
+                  session.activityType,
+                  t
+                )}
               </p>
 
               <div className="session-meta">
@@ -1464,7 +1851,9 @@ function SessionsSection({
                 <span>
                   🕒{" "}
                   {formatDate(
-                    session.startAt
+                    session.startAt,
+                    locale,
+                    t
                   )}
                 </span>
 
@@ -1473,11 +1862,17 @@ function SessionsSection({
                   {
                     session.durationMin
                   }{" "}
-                  min
+                  {t(
+                    "common.minutes"
+                  )}
                 </span>
 
                 <span>
-                  👤 Créateur :{" "}
+                  👤{" "}
+                  {t(
+                    "admin.creator"
+                  )}
+                  :{" "}
                   {
                     session.creatorEmail
                   }
@@ -1503,7 +1898,9 @@ function SessionsSection({
                     )
                   }
                 >
-                  Retirer la session
+                  {t(
+                    "admin.removeSession"
+                  )}
                 </button>
 
               ) : (
@@ -1514,8 +1911,12 @@ function SessionsSection({
                 >
                   {session.status ===
                   "COMPLETED"
-                    ? "Session terminée"
-                    : "Session annulée"}
+                    ? t(
+                        "profile.completed"
+                      )
+                    : t(
+                        "profile.cancelled"
+                      )}
                 </button>
               )}
 
@@ -1524,27 +1925,56 @@ function SessionsSection({
         )}
 
       </section>
+
     </>
   );
 }
 
 function formatDate(
-  value
+  value,
+  locale,
+  t
 ) {
   if (!value) {
-    return "Inconnue";
+    return t(
+      "common.unknown"
+    );
   }
 
   return new Date(
     value
   ).toLocaleString(
-    "fr-BE",
+    locale,
     {
-      day: "2-digit",
-      month: "2-digit",
-      year: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
+      day:
+        "2-digit",
+
+      month:
+        "2-digit",
+
+      year:
+        "numeric",
+
+      hour:
+        "2-digit",
+
+      minute:
+        "2-digit",
     }
   );
+}
+
+function activityLabel(
+  activity,
+  t
+) {
+  const key =
+    `activity.${activity}`;
+
+  const translated =
+    t(key);
+
+  return translated === key
+    ? activity
+    : translated;
 }

@@ -1,35 +1,20 @@
 import {
-  useEffect,
   useState,
 } from "react";
 
-import api from "../api/axios";
+import api
+  from "../api/axios";
+
+import { useLanguage }
+  from "../i18n/LanguageContext";
 
 const REASONS = [
-  {
-    value: "SPAM",
-    label: "Spam",
-  },
-  {
-    value: "INAPPROPRIATE_CONTENT",
-    label: "Contenu inapproprié",
-  },
-  {
-    value: "HARASSMENT",
-    label: "Harcèlement",
-  },
-  {
-    value: "DANGEROUS_BEHAVIOR",
-    label: "Comportement dangereux",
-  },
-  {
-    value: "FALSE_INFORMATION",
-    label: "Informations trompeuses",
-  },
-  {
-    value: "OTHER",
-    label: "Autre",
-  },
+  "SPAM",
+  "INAPPROPRIATE_CONTENT",
+  "HARASSMENT",
+  "DANGEROUS_BEHAVIOR",
+  "FALSE_INFORMATION",
+  "OTHER",
 ];
 
 export default function ReportPanel({
@@ -37,38 +22,73 @@ export default function ReportPanel({
   onCancel,
   onSuccess,
 }) {
-  const [reason, setReason] =
-    useState("SPAM");
-
-  const [details, setDetails] =
-    useState("");
-
-  const [error, setError] =
-    useState("");
-
-  const [submitting, setSubmitting] =
-    useState(false);
-
-  useEffect(() => {
-    setReason("SPAM");
-    setDetails("");
-    setError("");
-  }, [target]);
-
   if (!target) {
     return null;
   }
+
+  /*
+   * Le formulaire reçoit une key basée sur
+   * la cible.
+   *
+   * Lorsqu'un autre signalement est ouvert,
+   * React recrée automatiquement le formulaire
+   * avec un état propre.
+   *
+   * On évite ainsi de devoir réinitialiser le
+   * state dans un useEffect.
+   */
+  return (
+    <ReportForm
+      key={`${target.type}-${target.id}`}
+      target={target}
+      onCancel={onCancel}
+      onSuccess={onSuccess}
+    />
+  );
+}
+
+function ReportForm({
+  target,
+  onCancel,
+  onSuccess,
+}) {
+  const { t } =
+    useLanguage();
+
+  const [
+    reason,
+    setReason,
+  ] = useState(
+    "SPAM"
+  );
+
+  const [
+    details,
+    setDetails,
+  ] = useState("");
+
+  const [
+    error,
+    setError,
+  ] = useState("");
+
+  const [
+    submitting,
+    setSubmitting,
+  ] = useState(false);
 
   const submitReport =
     async (event) => {
       event.preventDefault();
 
       setSubmitting(true);
+
       setError("");
 
       try {
         const endpoint =
-          target.type === "SESSION"
+          target.type ===
+          "SESSION"
             ? `/reports/sessions/${target.id}`
             : `/reports/participants/${target.id}`;
 
@@ -76,6 +96,7 @@ export default function ReportPanel({
           endpoint,
           {
             reason,
+
             details:
               details.trim() ||
               null,
@@ -83,15 +104,22 @@ export default function ReportPanel({
         );
 
         onSuccess();
+
       } catch (err) {
         setError(
-          err.response?.data?.message ||
-            "Impossible d'envoyer le signalement."
+          t(
+            "report.error"
+          )
         );
 
-        console.error(err);
+        console.error(
+          err
+        );
+
       } finally {
-        setSubmitting(false);
+        setSubmitting(
+          false
+        );
       }
     };
 
@@ -99,12 +127,17 @@ export default function ReportPanel({
     <section
       className="create-session-form"
       style={{
-        marginBottom: "28px",
+        marginBottom:
+          "28px",
       }}
     >
+
       <div>
+
         <p className="eyebrow">
-          Signalement
+          {t(
+            "report.title"
+          )}
         </p>
 
         <h3
@@ -112,16 +145,21 @@ export default function ReportPanel({
             marginTop: 0,
           }}
         >
-          Signaler {target.label}
+          {t(
+            "report.report",
+            {
+              target:
+                target.label,
+            }
+          )}
         </h3>
 
         <p className="description">
-          Le signalement sera transmis
-          aux administrateurs de
-          TrainBuddy. Votre identité ne
-          sera pas communiquée au membre
-          signalé.
+          {t(
+            "report.description"
+          )}
         </p>
+
       </div>
 
       {error && (
@@ -131,11 +169,17 @@ export default function ReportPanel({
       )}
 
       <form
-        onSubmit={submitReport}
+        onSubmit={
+          submitReport
+        }
       >
+
         <div className="form-row">
+
           <label>
-            Motif
+            {t(
+              "report.reason"
+            )}
           </label>
 
           <select
@@ -146,27 +190,37 @@ export default function ReportPanel({
               )
             }
           >
+
             {REASONS.map(
-              (item) => (
+              (value) => (
                 <option
-                  key={item.value}
-                  value={item.value}
+                  key={value}
+                  value={value}
                 >
-                  {item.label}
+                  {t(
+                    `reason.${value}`
+                  )}
                 </option>
               )
             )}
+
           </select>
+
         </div>
 
         <div className="form-row">
+
           <label>
-            Détails
+            {t(
+              "report.details"
+            )}
           </label>
 
           <textarea
             maxLength={1000}
-            placeholder="Expliquez brièvement le problème..."
+            placeholder={t(
+              "report.detailsPlaceholder"
+            )}
             value={details}
             onChange={(event) =>
               setDetails(
@@ -174,29 +228,46 @@ export default function ReportPanel({
               )
             }
           />
+
         </div>
 
         <div className="card-actions">
+
           <button
             className="primary-btn"
             type="submit"
-            disabled={submitting}
+            disabled={
+              submitting
+            }
           >
             {submitting
-              ? "Envoi..."
-              : "Envoyer le signalement"}
+              ? t(
+                  "report.sending"
+                )
+              : t(
+                  "report.send"
+                )}
           </button>
 
           <button
             className="secondary-btn"
             type="button"
-            onClick={onCancel}
-            disabled={submitting}
+            onClick={
+              onCancel
+            }
+            disabled={
+              submitting
+            }
           >
-            Annuler
+            {t(
+              "common.cancel"
+            )}
           </button>
+
         </div>
+
       </form>
+
     </section>
   );
 }

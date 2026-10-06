@@ -3,6 +3,9 @@ import {
   useState,
 } from "react";
 
+import { useLanguage }
+  from "../i18n/LanguageContext";
+
 export default function AdminReportsSection({
   reports,
   onReview,
@@ -10,11 +13,20 @@ export default function AdminReportsSection({
   onCancelSession,
   onBanUser,
 }) {
-  const [search, setSearch] =
-    useState("");
+  const {
+    t,
+    locale,
+  } = useLanguage();
 
-  const [status, setStatus] =
-    useState("");
+  const [
+    search,
+    setSearch,
+  ] = useState("");
+
+  const [
+    status,
+    setStatus,
+  ] = useState("");
 
   const filteredReports =
     useMemo(() => {
@@ -60,20 +72,48 @@ export default function AdminReportsSection({
       status,
     ]);
 
+  const formatDate =
+    (value) => {
+      if (!value) {
+        return t(
+          "common.unknown"
+        );
+      }
+
+      return new Date(
+        value
+      ).toLocaleString(
+        locale,
+        {
+          day: "2-digit",
+          month: "2-digit",
+          year: "numeric",
+          hour: "2-digit",
+          minute: "2-digit",
+        }
+      );
+    };
+
   return (
     <>
+
       <section className="create-session-form">
 
         <div className="form-grid">
 
           <div className="form-row">
+
             <label>
-              Recherche
+              {t(
+                "common.search"
+              )}
             </label>
 
             <input
               type="text"
-              placeholder="Membre, session, motif..."
+              placeholder={t(
+                "admin.reportSearch"
+              )}
               value={search}
               onChange={(event) =>
                 setSearch(
@@ -81,11 +121,15 @@ export default function AdminReportsSection({
                 )
               }
             />
+
           </div>
 
           <div className="form-row">
+
             <label>
-              Statut
+              {t(
+                "admin.status"
+              )}
             </label>
 
             <select
@@ -96,22 +140,33 @@ export default function AdminReportsSection({
                 )
               }
             >
+
               <option value="">
-                Tous
+                {t(
+                  "common.all"
+                )}
               </option>
 
               <option value="OPEN">
-                OPEN
+                {t(
+                  "status.OPEN"
+                )}
               </option>
 
               <option value="REVIEWED">
-                REVIEWED
+                {t(
+                  "status.REVIEWED"
+                )}
               </option>
 
               <option value="CLOSED">
-                CLOSED
+                {t(
+                  "status.CLOSED"
+                )}
               </option>
+
             </select>
+
           </div>
 
         </div>
@@ -119,26 +174,41 @@ export default function AdminReportsSection({
       </section>
 
       <p className="empty-text">
-        {filteredReports.length} signalement(s)
+        {t(
+          "admin.reportCount",
+          {
+            count:
+              filteredReports.length,
+          }
+        )}
       </p>
 
       {filteredReports.length ===
       0 ? (
+
         <section className="session-card">
+
           <h3>
-            Aucun signalement
+            {t(
+              "admin.noReports"
+            )}
           </h3>
 
           <p className="description">
-            Aucun signalement ne correspond
-            aux filtres sélectionnés.
+            {t(
+              "admin.noReportsDescription"
+            )}
           </p>
+
         </section>
+
       ) : (
+
         <section className="sessions-grid">
 
           {filteredReports.map(
             (report) => (
+
               <article
                 className="session-card"
                 key={report.id}
@@ -147,35 +217,43 @@ export default function AdminReportsSection({
                 <div className="session-card-header">
 
                   <span className="badge">
-                    {
-                      report.status
-                    }
+                    {t(
+                      `status.${report.status}`
+                    )}
                   </span>
 
                   <span className="capacity">
                     {report.targetType ===
                     "USER"
-                      ? "UTILISATEUR"
-                      : "SESSION"}
+                      ? t(
+                          "admin.users"
+                        )
+                      : t(
+                          "admin.sessions"
+                        )}
                   </span>
 
                 </div>
 
                 <h3>
-                  {reasonLabel(
-                    report.reason
+                  {t(
+                    `reason.${report.reason}`
                   )}
                 </h3>
 
                 <p className="description">
                   {report.details ||
-                    "Aucun détail supplémentaire."}
+                    "—"}
                 </p>
 
                 <div className="session-meta">
 
                   <span>
-                    🚩 Auteur :{" "}
+                    🚩{" "}
+                    {t(
+                      "admin.author"
+                    )}
+                    :{" "}
                     {
                       report.reporterEmail
                     }
@@ -185,22 +263,37 @@ export default function AdminReportsSection({
                     "USER" && (
                     <>
                       <span>
-                        👤 Compte signalé :{" "}
+                        👤{" "}
+                        {t(
+                          "admin.reportedAccount"
+                        )}
+                        :{" "}
                         {
                           report.targetUserEmail
                         }
                       </span>
 
                       <span>
-                        État :{" "}
+                        {t(
+                          "admin.accountState"
+                        )}
+                        :{" "}
                         {report.targetUserBanned
-                          ? "Banni"
-                          : "Actif"}
+                          ? t(
+                              "admin.ban"
+                            )
+                          : t(
+                              "common.active"
+                            )}
                       </span>
 
                       {report.targetSessionTitle && (
                         <span>
-                          🏋️ Contexte :{" "}
+                          🏋️{" "}
+                          {t(
+                            "admin.context"
+                          )}
+                          :{" "}
                           {
                             report.targetSessionTitle
                           }
@@ -213,23 +306,30 @@ export default function AdminReportsSection({
                     "SESSION" && (
                     <>
                       <span>
-                        🏋️ Session :{" "}
+                        🏋️{" "}
                         {
                           report.targetSessionTitle
                         }
                       </span>
 
                       <span>
-                        Statut session :{" "}
-                        {
-                          report.targetSessionStatus
-                        }
+                        {t(
+                          "admin.status"
+                        )}
+                        :{" "}
+                        {t(
+                          `status.${report.targetSessionStatus}`
+                        )}
                       </span>
                     </>
                   )}
 
                   <span>
-                    📅 Créé :{" "}
+                    📅{" "}
+                    {t(
+                      "admin.createdAt"
+                    )}
+                    :{" "}
                     {formatDate(
                       report.createdAt
                     )}
@@ -237,7 +337,11 @@ export default function AdminReportsSection({
 
                   {report.reviewedAt && (
                     <span>
-                      🔎 Pris en charge :{" "}
+                      🔎{" "}
+                      {t(
+                        "admin.reviewedAt"
+                      )}
+                      :{" "}
                       {formatDate(
                         report.reviewedAt
                       )}
@@ -246,7 +350,11 @@ export default function AdminReportsSection({
 
                   {report.reviewedByEmail && (
                     <span>
-                      🛡️ Admin :{" "}
+                      🛡️{" "}
+                      {t(
+                        "admin.admin"
+                      )}
+                      :{" "}
                       {
                         report.reviewedByEmail
                       }
@@ -257,27 +365,29 @@ export default function AdminReportsSection({
 
                 {report.actions?.length >
                   0 && (
+
                   <div
                     style={{
                       marginTop:
                         "18px",
-
                       padding:
                         "14px",
-
                       background:
                         "#f8fafc",
-
                       borderRadius:
                         "12px",
                     }}
                   >
+
                     <strong>
-                      Historique
+                      {t(
+                        "admin.history"
+                      )}
                     </strong>
 
                     {report.actions.map(
                       (action) => (
+
                         <p
                           key={
                             action.id
@@ -287,8 +397,8 @@ export default function AdminReportsSection({
                               "8px 0 0",
                           }}
                         >
-                          {actionLabel(
-                            action.actionType
+                          {t(
+                            `action.${action.actionType}`
                           )}
                           {" — "}
                           {
@@ -301,6 +411,7 @@ export default function AdminReportsSection({
                         </p>
                       )
                     )}
+
                   </div>
                 )}
 
@@ -314,6 +425,7 @@ export default function AdminReportsSection({
 
                   {report.status ===
                     "OPEN" && (
+
                     <button
                       className="primary-btn"
                       onClick={() =>
@@ -322,7 +434,9 @@ export default function AdminReportsSection({
                         )
                       }
                     >
-                      Prendre en charge
+                      {t(
+                        "admin.review"
+                      )}
                     </button>
                   )}
 
@@ -337,7 +451,9 @@ export default function AdminReportsSection({
                           )
                         }
                       >
-                        Ignorer / fermer
+                        {t(
+                          "admin.ignore"
+                        )}
                       </button>
 
                       {report.targetType ===
@@ -350,7 +466,6 @@ export default function AdminReportsSection({
                           style={{
                             color:
                               "#dc2626",
-
                             background:
                               "#fef2f2",
                           }}
@@ -360,7 +475,9 @@ export default function AdminReportsSection({
                             )
                           }
                         >
-                          Retirer la session
+                          {t(
+                            "admin.removeSession"
+                          )}
                         </button>
                       )}
 
@@ -373,7 +490,6 @@ export default function AdminReportsSection({
                           style={{
                             color:
                               "#dc2626",
-
                             background:
                               "#fef2f2",
                           }}
@@ -383,7 +499,9 @@ export default function AdminReportsSection({
                             )
                           }
                         >
-                          Bannir le membre
+                          {t(
+                            "admin.banMember"
+                          )}
                         </button>
                       )}
                     </>
@@ -391,11 +509,14 @@ export default function AdminReportsSection({
 
                   {report.status ===
                     "CLOSED" && (
+
                     <button
                       className="secondary-btn"
                       disabled
                     >
-                      Traitement terminé
+                      {t(
+                        "admin.treatmentFinished"
+                      )}
                     </button>
                   )}
 
@@ -407,75 +528,7 @@ export default function AdminReportsSection({
 
         </section>
       )}
+
     </>
-  );
-}
-
-function reasonLabel(
-  reason
-) {
-  switch (reason) {
-    case "SPAM":
-      return "Spam";
-
-    case "INAPPROPRIATE_CONTENT":
-      return "Contenu inapproprié";
-
-    case "HARASSMENT":
-      return "Harcèlement";
-
-    case "DANGEROUS_BEHAVIOR":
-      return "Comportement dangereux";
-
-    case "FALSE_INFORMATION":
-      return "Informations trompeuses";
-
-    case "OTHER":
-      return "Autre";
-
-    default:
-      return reason;
-  }
-}
-
-function actionLabel(
-  actionType
-) {
-  switch (actionType) {
-    case "MARK_REVIEWED":
-      return "Signalement pris en charge";
-
-    case "IGNORE_REPORT":
-      return "Signalement fermé sans sanction";
-
-    case "CANCEL_SESSION":
-      return "Session retirée";
-
-    case "BAN_USER":
-      return "Utilisateur banni";
-
-    default:
-      return actionType;
-  }
-}
-
-function formatDate(
-  value
-) {
-  if (!value) {
-    return "Inconnue";
-  }
-
-  return new Date(
-    value
-  ).toLocaleString(
-    "fr-BE",
-    {
-      day: "2-digit",
-      month: "2-digit",
-      year: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    }
   );
 }

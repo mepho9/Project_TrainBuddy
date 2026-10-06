@@ -1,90 +1,248 @@
-import { useState } from "react";
-import api from "../api/axios";
+import { useState }
+  from "react";
 
-export default function RegisterPage({ onRegisterSuccess, onGoToLogin }) {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [message, setMessage] = useState("");
-  const [isSuccess, setIsSuccess] = useState(false);
+import api
+  from "../api/axios";
 
-  const handleRegister = async (e) => {
-    e.preventDefault();
-    setMessage("");
+import LanguageSwitcher
+  from "../components/LanguageSwitcher";
 
-    try {
-      const response = await api.post("/auth/register", {
-        email,
-        password,
-      });
+import { useLanguage }
+  from "../i18n/LanguageContext";
 
-      localStorage.setItem("token", response.data.token);
-      localStorage.setItem("email", response.data.email);
-      localStorage.setItem("role", response.data.role);
+export default function RegisterPage({
+  onRegisterSuccess,
+  onGoToLogin,
+}) {
+  const { t } =
+    useLanguage();
 
-      setIsSuccess(true);
-      setMessage("Compte créé avec succès !");
-      onRegisterSuccess();
-    } catch (error) {
-      setIsSuccess(false);
-      setMessage("Erreur lors de la création du compte");
-      console.error(error);
-    }
-  };
+  const [email, setEmail] =
+    useState("");
+
+  const [
+    password,
+    setPassword,
+  ] = useState("");
+
+  const [
+    message,
+    setMessage,
+  ] = useState("");
+
+  const [
+    isSuccess,
+    setIsSuccess,
+  ] = useState(false);
+
+  const handleRegister =
+    async (event) => {
+      event.preventDefault();
+
+      setMessage("");
+
+      try {
+        const response =
+          await api.post(
+            "/auth/register",
+            {
+              email,
+              password,
+            }
+          );
+
+        localStorage.setItem(
+          "token",
+          response.data.token
+        );
+
+        localStorage.setItem(
+          "email",
+          response.data.email
+        );
+
+        localStorage.setItem(
+          "role",
+          response.data.role
+        );
+
+        setIsSuccess(true);
+
+        setMessage(
+          t(
+            "auth.registerSuccess"
+          )
+        );
+
+        onRegisterSuccess();
+
+      } catch (error) {
+        setIsSuccess(false);
+
+        setMessage(
+          t(
+            "auth.registerError"
+          )
+        );
+
+        console.error(
+          error
+        );
+      }
+    };
 
   return (
     <div className="auth-page">
+
       <div className="auth-card">
+
+        <div
+          style={{
+            display: "flex",
+            justifyContent:
+              "flex-end",
+            marginBottom:
+              "10px",
+          }}
+        >
+          <LanguageSwitcher />
+        </div>
+
         <div className="brand">
-          <div className="brand-icon">🏋️</div>
+
+          <div className="brand-icon">
+            🏋️
+          </div>
+
           <h1>
             Train<span>Buddy</span>
           </h1>
-          <p>Créez votre compte gratuitement</p>
+
+          <p>
+            {t(
+              "auth.register.subtitle"
+            )}
+          </p>
+
         </div>
 
-        <form onSubmit={handleRegister} className="auth-form">
-          <label>Adresse e-mail</label>
+        <form
+          onSubmit={
+            handleRegister
+          }
+          className="auth-form"
+        >
+
+          <label>
+            {t(
+              "auth.email"
+            )}
+          </label>
+
           <div className="input-group">
-            <span>✉️</span>
+
+            <span>
+              ✉️
+            </span>
+
             <input
               type="email"
               placeholder="newuser@example.com"
               value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              onChange={(event) =>
+                setEmail(
+                  event.target.value
+                )
+              }
+              required
             />
+
           </div>
 
-          <label>Mot de passe</label>
+          <label>
+            {t(
+              "auth.password"
+            )}
+          </label>
+
           <div className="input-group">
-            <span>🔒</span>
+
+            <span>
+              🔒
+            </span>
+
             <input
               type="password"
-              placeholder="Minimum 8 caractères"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
+              placeholder={t(
+                "auth.passwordRegisterPlaceholder"
+              )}
+              value={
+                password
+              }
+              onChange={(event) =>
+                setPassword(
+                  event.target.value
+                )
+              }
+              required
             />
+
           </div>
 
-          <button type="submit">Créer mon compte</button>
+          <button type="submit">
+            {t(
+              "auth.register"
+            )}
+          </button>
+
         </form>
 
         {message && (
-          <div className={isSuccess ? "alert success" : "alert error"}>
+          <div
+            className={
+              isSuccess
+                ? "alert success"
+                : "alert error"
+            }
+          >
             {message}
           </div>
         )}
 
         <div className="auth-footer">
-          <span>Déjà un compte ?</span>
-          <button className="link-btn" onClick={onGoToLogin}>
-            Se connecter
+
+          <span>
+            {t(
+              "auth.alreadyAccount"
+            )}
+          </span>
+
+          <button
+            className="link-btn"
+            onClick={
+              onGoToLogin
+            }
+          >
+            {t(
+              "auth.login"
+            )}
           </button>
+
         </div>
+
       </div>
 
       <p className="copyright">
-        © 2026 <strong>TrainBuddy</strong>. Tous droits réservés.
+        © 2026{" "}
+        <strong>
+          TrainBuddy
+        </strong>
+        .{" "}
+        {t(
+          "auth.rights"
+        )}
       </p>
+
     </div>
   );
 }
