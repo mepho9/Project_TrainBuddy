@@ -1,5 +1,20 @@
-import { useState }
-  from "react";
+import {
+  ArrowRight,
+  Dumbbell,
+  LockKeyhole,
+  Mail,
+} from "lucide-react";
+
+import {
+  useState,
+} from "react";
+
+import {
+  Link,
+  useLocation,
+  useNavigate,
+  useSearchParams,
+} from "react-router-dom";
 
 import api
   from "../api/axios";
@@ -10,15 +25,23 @@ import LanguageSwitcher
 import { useLanguage }
   from "../i18n/LanguageContext";
 
-export default function LoginPage({
-  onLoginSuccess,
-  onGoToRegister,
-}) {
+export default function LoginPage() {
   const { t } =
     useLanguage();
 
-  const [email, setEmail] =
-    useState("");
+  const navigate =
+    useNavigate();
+
+  const location =
+    useLocation();
+
+  const [searchParams] =
+    useSearchParams();
+
+  const [
+    email,
+    setEmail,
+  ] = useState("");
 
   const [
     password,
@@ -28,11 +51,24 @@ export default function LoginPage({
   const [
     message,
     setMessage,
-  ] = useState("");
+  ] = useState(
+    searchParams.get(
+      "expired"
+    ) === "1"
+      ? t(
+          "auth.sessionExpired"
+        )
+      : ""
+  );
 
   const [
     isSuccess,
     setIsSuccess,
+  ] = useState(false);
+
+  const [
+    submitting,
+    setSubmitting,
   ] = useState(false);
 
   const handleLogin =
@@ -40,6 +76,7 @@ export default function LoginPage({
       event.preventDefault();
 
       setMessage("");
+      setSubmitting(true);
 
       try {
         const response =
@@ -68,13 +105,24 @@ export default function LoginPage({
 
         setIsSuccess(true);
 
-        setMessage(
-          t(
-            "auth.loginSuccess"
-          )
-        );
+        const requestedPath =
+          location.state?.from;
 
-        onLoginSuccess();
+        const target =
+          requestedPath ||
+          (
+            response.data.role ===
+            "ADMIN"
+              ? "/admin"
+              : "/sessions"
+          );
+
+        navigate(
+          target,
+          {
+            replace: true,
+          }
+        );
 
       } catch (error) {
         setIsSuccess(false);
@@ -88,160 +136,201 @@ export default function LoginPage({
         console.error(
           error
         );
+
+      } finally {
+        setSubmitting(false);
       }
     };
 
   return (
     <div className="auth-page">
 
-      <div className="auth-card">
+      <div className="auth-shell">
 
-        <div
-          style={{
-            display: "flex",
-            justifyContent:
-              "flex-end",
-            marginBottom:
-              "10px",
-          }}
-        >
+        <div className="auth-language">
           <LanguageSwitcher />
         </div>
 
-        <div className="brand">
+        <section className="auth-card">
 
-          <div className="brand-icon">
-            🏋️
-          </div>
+          <div className="brand auth-brand">
 
-          <h1>
-            Train<span>Buddy</span>
-          </h1>
+            <span className="brand-mark">
 
-          <p>
-            {t(
-              "auth.login.subtitle"
-            )}
-          </p>
+              <Dumbbell
+                size={25}
+                strokeWidth={2.2}
+              />
 
-        </div>
-
-        <form
-          onSubmit={
-            handleLogin
-          }
-          className="auth-form"
-        >
-
-          <label>
-            {t(
-              "auth.email"
-            )}
-          </label>
-
-          <div className="input-group">
-
-            <span>
-              ✉️
             </span>
 
-            <input
-              type="email"
-              placeholder="user@example.com"
-              value={email}
-              onChange={(event) =>
-                setEmail(
-                  event.target.value
-                )
-              }
-              required
-            />
+            <div>
+
+              <p className="auth-kicker">
+                {t(
+                  "auth.welcome"
+                )}
+              </p>
+
+              <h1>
+                Train<span>Buddy</span>
+              </h1>
+
+              <p className="auth-subtitle">
+                {t(
+                  "auth.login.subtitle"
+                )}
+              </p>
+
+            </div>
 
           </div>
 
-          <label>
-            {t(
-              "auth.password"
-            )}
-          </label>
+          <form
+            onSubmit={
+              handleLogin
+            }
+            className="auth-form"
+          >
 
-          <div className="input-group">
-
-            <span>
-              🔒
-            </span>
-
-            <input
-              type="password"
-              placeholder={t(
-                "auth.passwordPlaceholder"
+            <label
+              htmlFor="login-email"
+            >
+              {t(
+                "auth.email"
               )}
-              value={
-                password
+            </label>
+
+            <div className="input-group">
+
+              <Mail
+                size={18}
+                aria-hidden="true"
+              />
+
+              <input
+                id="login-email"
+                type="email"
+                autoComplete="email"
+                placeholder="user@example.com"
+                value={email}
+                onChange={(event) =>
+                  setEmail(
+                    event.target.value
+                  )
+                }
+                required
+              />
+
+            </div>
+
+            <label
+              htmlFor="login-password"
+            >
+              {t(
+                "auth.password"
+              )}
+            </label>
+
+            <div className="input-group">
+
+              <LockKeyhole
+                size={18}
+                aria-hidden="true"
+              />
+
+              <input
+                id="login-password"
+                type="password"
+                autoComplete="current-password"
+                placeholder={t(
+                  "auth.passwordPlaceholder"
+                )}
+                value={
+                  password
+                }
+                onChange={(event) =>
+                  setPassword(
+                    event.target.value
+                  )
+                }
+                required
+              />
+
+            </div>
+
+            <button
+              type="submit"
+              disabled={
+                submitting
               }
-              onChange={(event) =>
-                setPassword(
-                  event.target.value
-                )
+            >
+
+              <span>
+
+                {submitting
+                  ? t(
+                      "common.loading"
+                    )
+                  : t(
+                      "auth.login"
+                    )}
+
+              </span>
+
+              {!submitting && (
+                <ArrowRight
+                  size={18}
+                />
+              )}
+
+            </button>
+
+          </form>
+
+          {message && (
+
+            <div
+              className={
+                isSuccess
+                  ? "alert success"
+                  : "alert error"
               }
-              required
-            />
+            >
+              {message}
+            </div>
+
+          )}
+
+          <div className="auth-footer">
+
+            <span>
+              {t(
+                "auth.noAccount"
+              )}
+            </span>
+
+            <Link
+              className="link-btn"
+              to="/register"
+            >
+              {t(
+                "auth.createAccount"
+              )}
+            </Link>
 
           </div>
 
-          <button type="submit">
-            {t(
-              "auth.login"
-            )}
-          </button>
+        </section>
 
-        </form>
-
-        {message && (
-          <div
-            className={
-              isSuccess
-                ? "alert success"
-                : "alert error"
-            }
-          >
-            {message}
-          </div>
-        )}
-
-        <div className="auth-footer">
-
-          <span>
-            {t(
-              "auth.noAccount"
-            )}
-          </span>
-
-          <button
-            className="link-btn"
-            onClick={
-              onGoToRegister
-            }
-          >
-            {t(
-              "auth.createAccount"
-            )}
-          </button>
-
-        </div>
+        <p className="copyright">
+          © 2026 TrainBuddy.{" "}
+          {t(
+            "auth.rights"
+          )}
+        </p>
 
       </div>
-
-      <p className="copyright">
-        © 2026{" "}
-        <strong>
-          TrainBuddy
-        </strong>
-        .{" "}
-        {t(
-          "auth.rights"
-        )}
-      </p>
 
     </div>
   );

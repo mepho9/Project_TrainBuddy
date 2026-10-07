@@ -1,5 +1,18 @@
-import { useState }
-  from "react";
+import {
+  ArrowRight,
+  Dumbbell,
+  LockKeyhole,
+  Mail,
+} from "lucide-react";
+
+import {
+  useState,
+} from "react";
+
+import {
+  Link,
+  useNavigate,
+} from "react-router-dom";
 
 import api
   from "../api/axios";
@@ -10,15 +23,17 @@ import LanguageSwitcher
 import { useLanguage }
   from "../i18n/LanguageContext";
 
-export default function RegisterPage({
-  onRegisterSuccess,
-  onGoToLogin,
-}) {
+export default function RegisterPage() {
   const { t } =
     useLanguage();
 
-  const [email, setEmail] =
-    useState("");
+  const navigate =
+    useNavigate();
+
+  const [
+    email,
+    setEmail,
+  ] = useState("");
 
   const [
     password,
@@ -35,11 +50,17 @@ export default function RegisterPage({
     setIsSuccess,
   ] = useState(false);
 
+  const [
+    submitting,
+    setSubmitting,
+  ] = useState(false);
+
   const handleRegister =
     async (event) => {
       event.preventDefault();
 
       setMessage("");
+      setSubmitting(true);
 
       try {
         const response =
@@ -68,13 +89,15 @@ export default function RegisterPage({
 
         setIsSuccess(true);
 
-        setMessage(
-          t(
-            "auth.registerSuccess"
-          )
+        navigate(
+          response.data.role ===
+          "ADMIN"
+            ? "/admin"
+            : "/sessions",
+          {
+            replace: true,
+          }
         );
-
-        onRegisterSuccess();
 
       } catch (error) {
         setIsSuccess(false);
@@ -88,160 +111,202 @@ export default function RegisterPage({
         console.error(
           error
         );
+
+      } finally {
+        setSubmitting(false);
       }
     };
 
   return (
     <div className="auth-page">
 
-      <div className="auth-card">
+      <div className="auth-shell">
 
-        <div
-          style={{
-            display: "flex",
-            justifyContent:
-              "flex-end",
-            marginBottom:
-              "10px",
-          }}
-        >
+        <div className="auth-language">
           <LanguageSwitcher />
         </div>
 
-        <div className="brand">
+        <section className="auth-card">
 
-          <div className="brand-icon">
-            🏋️
-          </div>
+          <div className="brand auth-brand">
 
-          <h1>
-            Train<span>Buddy</span>
-          </h1>
+            <span className="brand-mark">
 
-          <p>
-            {t(
-              "auth.register.subtitle"
-            )}
-          </p>
+              <Dumbbell
+                size={25}
+                strokeWidth={2.2}
+              />
 
-        </div>
-
-        <form
-          onSubmit={
-            handleRegister
-          }
-          className="auth-form"
-        >
-
-          <label>
-            {t(
-              "auth.email"
-            )}
-          </label>
-
-          <div className="input-group">
-
-            <span>
-              ✉️
             </span>
 
-            <input
-              type="email"
-              placeholder="newuser@example.com"
-              value={email}
-              onChange={(event) =>
-                setEmail(
-                  event.target.value
-                )
-              }
-              required
-            />
+            <div>
+
+              <p className="auth-kicker">
+                {t(
+                  "auth.join"
+                )}
+              </p>
+
+              <h1>
+                Train<span>Buddy</span>
+              </h1>
+
+              <p className="auth-subtitle">
+                {t(
+                  "auth.register.subtitle"
+                )}
+              </p>
+
+            </div>
 
           </div>
 
-          <label>
-            {t(
-              "auth.password"
-            )}
-          </label>
+          <form
+            onSubmit={
+              handleRegister
+            }
+            className="auth-form"
+          >
 
-          <div className="input-group">
-
-            <span>
-              🔒
-            </span>
-
-            <input
-              type="password"
-              placeholder={t(
-                "auth.passwordRegisterPlaceholder"
+            <label
+              htmlFor="register-email"
+            >
+              {t(
+                "auth.email"
               )}
-              value={
-                password
+            </label>
+
+            <div className="input-group">
+
+              <Mail
+                size={18}
+                aria-hidden="true"
+              />
+
+              <input
+                id="register-email"
+                type="email"
+                autoComplete="email"
+                placeholder="newuser@example.com"
+                value={email}
+                onChange={(event) =>
+                  setEmail(
+                    event.target.value
+                  )
+                }
+                required
+              />
+
+            </div>
+
+            <label
+              htmlFor="register-password"
+            >
+              {t(
+                "auth.password"
+              )}
+            </label>
+
+            <div className="input-group">
+
+              <LockKeyhole
+                size={18}
+                aria-hidden="true"
+              />
+
+              <input
+                id="register-password"
+                type="password"
+                autoComplete="new-password"
+                minLength={8}
+                placeholder={t(
+                  "auth.passwordRegisterPlaceholder"
+                )}
+                value={
+                  password
+                }
+                onChange={(event) =>
+                  setPassword(
+                    event.target.value
+                  )
+                }
+                required
+              />
+
+            </div>
+
+            <button
+              type="submit"
+              disabled={
+                submitting
               }
-              onChange={(event) =>
-                setPassword(
-                  event.target.value
-                )
+            >
+
+              <span>
+
+                {submitting
+                  ? t(
+                      "common.loading"
+                    )
+                  : t(
+                      "auth.register"
+                    )}
+
+              </span>
+
+              {!submitting && (
+                <ArrowRight
+                  size={18}
+                />
+              )}
+
+            </button>
+
+          </form>
+
+          {message && (
+
+            <div
+              className={
+                isSuccess
+                  ? "alert success"
+                  : "alert error"
               }
-              required
-            />
+            >
+              {message}
+            </div>
+
+          )}
+
+          <div className="auth-footer">
+
+            <span>
+              {t(
+                "auth.alreadyAccount"
+              )}
+            </span>
+
+            <Link
+              className="link-btn"
+              to="/login"
+            >
+              {t(
+                "auth.login"
+              )}
+            </Link>
 
           </div>
 
-          <button type="submit">
-            {t(
-              "auth.register"
-            )}
-          </button>
+        </section>
 
-        </form>
-
-        {message && (
-          <div
-            className={
-              isSuccess
-                ? "alert success"
-                : "alert error"
-            }
-          >
-            {message}
-          </div>
-        )}
-
-        <div className="auth-footer">
-
-          <span>
-            {t(
-              "auth.alreadyAccount"
-            )}
-          </span>
-
-          <button
-            className="link-btn"
-            onClick={
-              onGoToLogin
-            }
-          >
-            {t(
-              "auth.login"
-            )}
-          </button>
-
-        </div>
+        <p className="copyright">
+          © 2026 TrainBuddy.{" "}
+          {t(
+            "auth.rights"
+          )}
+        </p>
 
       </div>
-
-      <p className="copyright">
-        © 2026{" "}
-        <strong>
-          TrainBuddy
-        </strong>
-        .{" "}
-        {t(
-          "auth.rights"
-        )}
-      </p>
 
     </div>
   );

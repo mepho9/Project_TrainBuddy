@@ -1,45 +1,80 @@
+import {
+  Languages,
+} from "lucide-react";
+
 import { useLanguage }
   from "../i18n/LanguageContext";
+
+const LANGUAGES = [
+  {
+    code: "fr",
+    label: "FR",
+  },
+  {
+    code: "en",
+    label: "EN",
+  },
+  {
+    code: "nl",
+    label: "NL",
+  },
+];
 
 export default function LanguageSwitcher() {
   const {
     language,
     setLanguage,
+    t,
   } = useLanguage();
 
   return (
-    <select
-      value={language}
-      onChange={(event) =>
-        setLanguage(
-          event.target.value
-        )
-      }
-      aria-label="Language"
-      style={{
-        width: "auto",
-        minWidth: "78px",
-        padding: "9px 12px",
-        borderRadius: "10px",
-        border:
-          "1px solid #dbe4f0",
-        background: "#ffffff",
-        color: "#334155",
-        fontWeight: 700,
-        cursor: "pointer",
-      }}
+    <div
+      className="language-switcher"
+      role="group"
+      aria-label={t(
+        "language.label"
+      )}
     >
-      <option value="fr">
-        🇫🇷 FR
-      </option>
 
-      <option value="en">
-        🇬🇧 EN
-      </option>
+      <Languages
+        size={15}
+        aria-hidden="true"
+      />
 
-      <option value="nl">
-        🇧🇪 NL
-      </option>
-    </select>
+      <div className="language-options">
+
+        {LANGUAGES.map(
+          (item) => (
+
+            <button
+              key={
+                item.code
+              }
+              type="button"
+              className={
+                language ===
+                item.code
+                  ? "active"
+                  : ""
+              }
+              aria-pressed={
+                language ===
+                item.code
+              }
+              onClick={() =>
+                setLanguage(
+                  item.code
+                )
+              }
+            >
+              {item.label}
+            </button>
+
+          )
+        )}
+
+      </div>
+
+    </div>
   );
 }

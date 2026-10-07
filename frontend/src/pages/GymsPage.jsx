@@ -1,4 +1,8 @@
 import {
+  MapPin,
+} from "lucide-react";
+
+import {
   useEffect,
   useState,
 } from "react";
@@ -107,11 +111,38 @@ export default function GymsPage() {
               key={gym.id}
             >
 
-              <div className="gym-icon">
-                📍
+              <div className="gym-card-top">
+
+                <div className="gym-icon">
+                  <MapPin
+                    size={20}
+                    strokeWidth={2}
+                  />
+                </div>
+
+                <span
+                  className={`gym-status${
+                    gym.active
+                      ? ""
+                      : " inactive"
+                  }`}
+                >
+
+                  <span className="gym-status-dot" />
+
+                  {gym.active
+                    ? t(
+                        "common.active"
+                      )
+                    : t(
+                        "common.inactive"
+                      )}
+
+                </span>
+
               </div>
 
-              <div>
+              <div className="gym-card-content">
 
                 <h3>
                   {gym.name}
@@ -124,25 +155,6 @@ export default function GymsPage() {
                 <p className="description">
                   {gym.address}
                 </p>
-
-              </div>
-
-              <div className="gym-meta">
-
-                <span>
-                  {gym.active
-                    ? t(
-                        "common.active"
-                      )
-                    : t(
-                        "common.inactive"
-                      )}
-                </span>
-
-                <span>
-                  {gym.latitude},{" "}
-                  {gym.longitude}
-                </span>
 
               </div>
 

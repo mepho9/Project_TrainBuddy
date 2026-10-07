@@ -14,6 +14,9 @@ import translations
 import profileTranslations
   from "./profileTranslations";
 
+import uiTranslations
+  from "./uiTranslations";
+
 const LanguageContext =
   createContext(null);
 
@@ -74,6 +77,22 @@ function interpolate(
   );
 }
 
+function removeDecorativeEmoji(
+  value
+) {
+  if (
+    typeof value !==
+    "string"
+  ) {
+    return value;
+  }
+
+  return value.replace(
+    /^[\p{Extended_Pictographic}\uFE0F\u200D\s]+/u,
+    ""
+  );
+}
+
 export function LanguageProvider({
   children,
 }) {
@@ -93,49 +112,63 @@ export function LanguageProvider({
     document.documentElement.lang =
       language;
 
-  }, [language]);
+  }, [
+    language,
+  ]);
 
-  const value = useMemo(
-    () => ({
-      language,
+  const value =
+    useMemo(
+      () => ({
+        language,
 
-      setLanguage,
+        setLanguage,
 
-      t: (
-        key,
-        variables = {}
-      ) => {
-        const translatedValue =
-          profileTranslations[
-            language
-          ]?.[key] ??
-          translations[
-            language
-          ]?.[key] ??
-          profileTranslations.fr?.[
-            key
-          ] ??
-          translations.fr?.[
-            key
-          ] ??
-          key;
+        t: (
+          key,
+          variables = {}
+        ) => {
+          const translatedValue =
+            uiTranslations[
+              language
+            ]?.[key] ??
+            profileTranslations[
+              language
+            ]?.[key] ??
+            translations[
+              language
+            ]?.[key] ??
+            uiTranslations.fr?.[
+              key
+            ] ??
+            profileTranslations.fr?.[
+              key
+            ] ??
+            translations.fr?.[
+              key
+            ] ??
+            key;
 
-        return interpolate(
-          translatedValue,
-          variables
-        );
-      },
+          return interpolate(
+            removeDecorativeEmoji(
+              translatedValue
+            ),
+            variables
+          );
+        },
 
-      locale:
-        language === "en"
-          ? "en-GB"
-          : language === "nl"
-          ? "nl-BE"
-          : "fr-BE",
-    }),
+        locale:
+          language === "en"
+            ? "en-GB"
+            : language ===
+              "nl"
+            ? "nl-BE"
+            : "fr-BE",
+      }),
 
-    [language]
-  );
+      [
+        language,
+      ]
+    );
 
   return (
     <LanguageContext.Provider

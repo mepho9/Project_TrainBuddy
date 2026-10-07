@@ -1,228 +1,268 @@
-import { useState } from "react";
+import {
+  Navigate,
+  Outlet,
+  Route,
+  Routes,
+  useLocation,
+} from "react-router-dom";
 
-import LoginPage from "./pages/LoginPage";
-import RegisterPage from "./pages/RegisterPage";
-import SessionsPage from "./pages/SessionsPage";
-import GymsPage from "./pages/GymsPage";
-import EnhancedProfilePage from "./pages/EnhancedProfilePage";
-import AdminPage from "./pages/AdminPage";
+import AppShell
+  from "./components/AppShell";
 
-import AppShell from "./components/AppShell";
+import AdminPage
+  from "./pages/AdminPage";
+
+import EnhancedProfilePage
+  from "./pages/EnhancedProfilePage";
+
+import GymsPage
+  from "./pages/GymsPage";
+
+import LoginPage
+  from "./pages/LoginPage";
+
+import NotFoundPage
+  from "./pages/NotFoundPage";
+
+import RegisterPage
+  from "./pages/RegisterPage";
+
+import SessionsPage
+  from "./pages/SessionsPage";
 
 import "./App.css";
 
-function App() {
-  const initialRole =
-    localStorage.getItem(
-      "role"
-    );
+import "./styles/professional.css";
 
-  const requestedPage =
-    new URLSearchParams(
-      window.location.search
-    ).get(
-      "page"
-    );
+import "./styles/polish.css";
 
-  const [
-    isAuthenticated,
-    setIsAuthenticated,
-  ] = useState(
-    Boolean(
+function getAuthState() {
+  return {
+    token:
       localStorage.getItem(
         "token"
-      )
-    )
-  );
+      ),
 
-  const [
-    role,
-    setRole,
-  ] = useState(
-    initialRole
-  );
-
-  const [
-    authMode,
-    setAuthMode,
-  ] = useState(
-    "login"
-  );
-
-  const [
-    activePage,
-    setActivePage,
-  ] = useState(
-    initialRole ===
-    "ADMIN"
-      ? "admin"
-      : requestedPage ===
-        "profile"
-      ? "profile"
-      : "sessions"
-  );
-
-  const handleAuthSuccess =
-    () => {
-      const authenticatedRole =
-        localStorage.getItem(
-          "role"
-        );
-
-      const page =
-        new URLSearchParams(
-          window.location.search
-        ).get(
-          "page"
-        );
-
-      setRole(
-        authenticatedRole
-      );
-
-      setIsAuthenticated(
-        true
-      );
-
-      setActivePage(
-        authenticatedRole ===
-        "ADMIN"
-          ? "admin"
-          : page ===
-            "profile"
-          ? "profile"
-          : "sessions"
-      );
-    };
-
-  const handleLogout =
-    () => {
-      localStorage.removeItem(
-        "token"
-      );
-
-      localStorage.removeItem(
-        "email"
-      );
-
-      localStorage.removeItem(
+    role:
+      localStorage.getItem(
         "role"
-      );
+      ),
+  };
+}
 
-      localStorage.removeItem(
-        "participantIds"
-      );
+function defaultPathForRole(
+  role
+) {
+  return role ===
+    "ADMIN"
+    ? "/admin"
+    : "/sessions";
+}
 
-      localStorage.removeItem(
-        "participantId"
-      );
+function HomeRedirect() {
+  const {
+    token,
+    role,
+  } = getAuthState();
 
-      localStorage.removeItem(
-        "joinedSessionId"
-      );
-
-      setRole(
-        null
-      );
-
-      setIsAuthenticated(
-        false
-      );
-
-      setAuthMode(
-        "login"
-      );
-
-      setActivePage(
-        "sessions"
-      );
-    };
-
-  if (!isAuthenticated) {
-    return authMode ===
-      "login" ? (
-
-      <LoginPage
-        onLoginSuccess={
-          handleAuthSuccess
-        }
-        onGoToRegister={() =>
-          setAuthMode(
-            "register"
-          )
-        }
-      />
-
-    ) : (
-
-      <RegisterPage
-        onRegisterSuccess={
-          handleAuthSuccess
-        }
-        onGoToLogin={() =>
-          setAuthMode(
-            "login"
-          )
-        }
+  if (!token) {
+    return (
+      <Navigate
+        to="/login"
+        replace
       />
     );
   }
 
   return (
-    <AppShell
-      activePage={
-        activePage
+    <Navigate
+      to={
+        defaultPathForRole(
+          role
+        )
       }
-      onChangePage={
-        setActivePage
-      }
-      onLogout={
-        handleLogout
-      }
-      role={
-        role
-      }
-    >
+      replace
+    />
+  );
+}
 
-      {role ===
-        "ADMIN" && (
-        <>
+function GuestOnlyRoute() {
+  const {
+    token,
+    role,
+  } = getAuthState();
 
-          {activePage ===
-            "admin" && (
-            <AdminPage />
-          )}
+  if (token) {
+    return (
+      <Navigate
+        to={
+          defaultPathForRole(
+            role
+          )
+        }
+        replace
+      />
+    );
+  }
 
-        </>
-      )}
+  return <Outlet />;
+}
 
-      {role !==
-        "ADMIN" && (
-        <>
+function ProtectedRoute({
+  allowedRoles,
+}) {
+  const location =
+    useLocation();
 
-          {activePage ===
-            "sessions" && (
-            <SessionsPage />
-          )}
+  const {
+    token,
+    role,
+  } = getAuthState();
 
-          {activePage ===
-            "gyms" && (
-            <GymsPage />
-          )}
+  if (!token) {
+    return (
+      <Navigate
+        to="/login"
+        replace
+        state={{
+          from:
+            location.pathname +
+            location.search,
+        }}
+      />
+    );
+  }
 
-          {activePage ===
-            "profile" && (
-            <EnhancedProfilePage
-              onLogout={
-                handleLogout
-              }
-            />
-          )}
+  if (
+    allowedRoles &&
+    !allowedRoles.includes(
+      role
+    )
+  ) {
+    return (
+      <Navigate
+        to={
+          defaultPathForRole(
+            role
+          )
+        }
+        replace
+      />
+    );
+  }
 
-        </>
-      )}
+  return <Outlet />;
+}
 
-    </AppShell>
+function App() {
+  return (
+    <Routes>
+
+      <Route
+        path="/"
+        element={
+          <HomeRedirect />
+        }
+      />
+
+      <Route
+        element={
+          <GuestOnlyRoute />
+        }
+      >
+
+        <Route
+          path="/login"
+          element={
+            <LoginPage />
+          }
+        />
+
+        <Route
+          path="/register"
+          element={
+            <RegisterPage />
+          }
+        />
+
+      </Route>
+
+      <Route
+        element={
+          <ProtectedRoute
+            allowedRoles={[
+              "MEMBER",
+            ]}
+          />
+        }
+      >
+
+        <Route
+          element={
+            <AppShell />
+          }
+        >
+
+          <Route
+            path="/sessions"
+            element={
+              <SessionsPage />
+            }
+          />
+
+          <Route
+            path="/gyms"
+            element={
+              <GymsPage />
+            }
+          />
+
+          <Route
+            path="/profile"
+            element={
+              <EnhancedProfilePage />
+            }
+          />
+
+        </Route>
+
+      </Route>
+
+      <Route
+        element={
+          <ProtectedRoute
+            allowedRoles={[
+              "ADMIN",
+            ]}
+          />
+        }
+      >
+
+        <Route
+          element={
+            <AppShell />
+          }
+        >
+
+          <Route
+            path="/admin"
+            element={
+              <AdminPage />
+            }
+          />
+
+        </Route>
+
+      </Route>
+
+      <Route
+        path="*"
+        element={
+          <NotFoundPage />
+        }
+      />
+
+    </Routes>
   );
 }
 
