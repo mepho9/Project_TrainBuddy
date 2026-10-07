@@ -4,7 +4,7 @@ import LoginPage from "./pages/LoginPage";
 import RegisterPage from "./pages/RegisterPage";
 import SessionsPage from "./pages/SessionsPage";
 import GymsPage from "./pages/GymsPage";
-import ProfilePage from "./pages/ProfilePage";
+import EnhancedProfilePage from "./pages/EnhancedProfilePage";
 import AdminPage from "./pages/AdminPage";
 
 import AppShell from "./components/AppShell";
@@ -13,104 +13,135 @@ import "./App.css";
 
 function App() {
   const initialRole =
-    localStorage.getItem("role");
+    localStorage.getItem(
+      "role"
+    );
 
   const requestedPage =
     new URLSearchParams(
       window.location.search
-    ).get("page");
+    ).get(
+      "page"
+    );
 
-  const [isAuthenticated, setIsAuthenticated] =
-    useState(
-      Boolean(
-        localStorage.getItem("token")
+  const [
+    isAuthenticated,
+    setIsAuthenticated,
+  ] = useState(
+    Boolean(
+      localStorage.getItem(
+        "token"
       )
-    );
+    )
+  );
 
-  const [role, setRole] =
-    useState(initialRole);
+  const [
+    role,
+    setRole,
+  ] = useState(
+    initialRole
+  );
 
-  const [authMode, setAuthMode] =
-    useState("login");
+  const [
+    authMode,
+    setAuthMode,
+  ] = useState(
+    "login"
+  );
 
-  const [activePage, setActivePage] =
-    useState(
-      initialRole === "ADMIN"
-        ? "admin"
-        : requestedPage === "profile"
-        ? "profile"
-        : "sessions"
-    );
+  const [
+    activePage,
+    setActivePage,
+  ] = useState(
+    initialRole ===
+    "ADMIN"
+      ? "admin"
+      : requestedPage ===
+        "profile"
+      ? "profile"
+      : "sessions"
+  );
 
-  const handleAuthSuccess = () => {
-    const authenticatedRole =
-      localStorage.getItem("role");
+  const handleAuthSuccess =
+    () => {
+      const authenticatedRole =
+        localStorage.getItem(
+          "role"
+        );
 
-    const page =
-      new URLSearchParams(
-        window.location.search
-      ).get("page");
+      const page =
+        new URLSearchParams(
+          window.location.search
+        ).get(
+          "page"
+        );
 
-    setRole(
-      authenticatedRole
-    );
+      setRole(
+        authenticatedRole
+      );
 
-    setIsAuthenticated(
-      true
-    );
+      setIsAuthenticated(
+        true
+      );
 
-    setActivePage(
-      authenticatedRole === "ADMIN"
-        ? "admin"
-        : page === "profile"
-        ? "profile"
-        : "sessions"
-    );
-  };
+      setActivePage(
+        authenticatedRole ===
+        "ADMIN"
+          ? "admin"
+          : page ===
+            "profile"
+          ? "profile"
+          : "sessions"
+      );
+    };
 
-  const handleLogout = () => {
-    localStorage.removeItem(
-      "token"
-    );
+  const handleLogout =
+    () => {
+      localStorage.removeItem(
+        "token"
+      );
 
-    localStorage.removeItem(
-      "email"
-    );
+      localStorage.removeItem(
+        "email"
+      );
 
-    localStorage.removeItem(
-      "role"
-    );
+      localStorage.removeItem(
+        "role"
+      );
 
-    localStorage.removeItem(
-      "participantIds"
-    );
+      localStorage.removeItem(
+        "participantIds"
+      );
 
-    localStorage.removeItem(
-      "participantId"
-    );
+      localStorage.removeItem(
+        "participantId"
+      );
 
-    localStorage.removeItem(
-      "joinedSessionId"
-    );
+      localStorage.removeItem(
+        "joinedSessionId"
+      );
 
-    setRole(null);
+      setRole(
+        null
+      );
 
-    setIsAuthenticated(
-      false
-    );
+      setIsAuthenticated(
+        false
+      );
 
-    setAuthMode(
-      "login"
-    );
+      setAuthMode(
+        "login"
+      );
 
-    setActivePage(
-      "sessions"
-    );
-  };
+      setActivePage(
+        "sessions"
+      );
+    };
 
   if (!isAuthenticated) {
     return authMode ===
       "login" ? (
+
       <LoginPage
         onLoginSuccess={
           handleAuthSuccess
@@ -121,7 +152,9 @@ function App() {
           )
         }
       />
+
     ) : (
+
       <RegisterPage
         onRegisterSuccess={
           handleAuthSuccess
@@ -151,16 +184,20 @@ function App() {
       }
     >
 
-      {role === "ADMIN" && (
+      {role ===
+        "ADMIN" && (
         <>
+
           {activePage ===
             "admin" && (
             <AdminPage />
           )}
+
         </>
       )}
 
-      {role !== "ADMIN" && (
+      {role !==
+        "ADMIN" && (
         <>
 
           {activePage ===
@@ -175,7 +212,7 @@ function App() {
 
           {activePage ===
             "profile" && (
-            <ProfilePage
+            <EnhancedProfilePage
               onLogout={
                 handleLogout
               }

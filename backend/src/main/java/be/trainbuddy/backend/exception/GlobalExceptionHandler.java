@@ -2,10 +2,14 @@ package be.trainbuddy.backend.exception;
 
 import be.trainbuddy.backend.dto.ApiErrorResponse;
 import jakarta.servlet.http.HttpServletRequest;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDateTime;
+
+@Slf4j
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
@@ -15,8 +19,9 @@ public class GlobalExceptionHandler {
             ResourceNotFoundException ex,
             HttpServletRequest request
     ) {
+
         return new ApiErrorResponse(
-                java.time.LocalDateTime.now(),
+                LocalDateTime.now(),
                 404,
                 "Not Found",
                 ex.getMessage(),
@@ -30,8 +35,9 @@ public class GlobalExceptionHandler {
             BadRequestException ex,
             HttpServletRequest request
     ) {
+
         return new ApiErrorResponse(
-                java.time.LocalDateTime.now(),
+                LocalDateTime.now(),
                 400,
                 "Bad Request",
                 ex.getMessage(),
@@ -45,8 +51,9 @@ public class GlobalExceptionHandler {
             ForbiddenException ex,
             HttpServletRequest request
     ) {
+
         return new ApiErrorResponse(
-                java.time.LocalDateTime.now(),
+                LocalDateTime.now(),
                 403,
                 "Forbidden",
                 ex.getMessage(),
@@ -60,8 +67,9 @@ public class GlobalExceptionHandler {
             ConflictException ex,
             HttpServletRequest request
     ) {
+
         return new ApiErrorResponse(
-                java.time.LocalDateTime.now(),
+                LocalDateTime.now(),
                 409,
                 "Conflict",
                 ex.getMessage(),
@@ -75,19 +83,23 @@ public class GlobalExceptionHandler {
             MethodArgumentNotValidException ex,
             HttpServletRequest request
     ) {
-        String message = ex.getBindingResult()
-                .getFieldErrors()
-                .stream()
-                .findFirst()
-                .map(error ->
-                        error.getField()
-                                + " : "
-                                + error.getDefaultMessage()
-                )
-                .orElse("Données invalides");
+
+        String message =
+                ex.getBindingResult()
+                        .getFieldErrors()
+                        .stream()
+                        .findFirst()
+                        .map(error ->
+                                error.getField()
+                                        + " : "
+                                        + error.getDefaultMessage()
+                        )
+                        .orElse(
+                                "Données invalides"
+                        );
 
         return new ApiErrorResponse(
-                java.time.LocalDateTime.now(),
+                LocalDateTime.now(),
                 400,
                 "Validation Error",
                 message,
@@ -101,8 +113,26 @@ public class GlobalExceptionHandler {
             Exception ex,
             HttpServletRequest request
     ) {
+
+        /*
+         * Très important :
+         *
+         * L'utilisateur ne reçoit pas les détails
+         * techniques de l'exception.
+         *
+         * Mais côté serveur, nous conservons toute
+         * la stacktrace afin de pouvoir diagnostiquer
+         * correctement les erreurs 500.
+         */
+        log.error(
+                "Erreur interne sur {} {}",
+                request.getMethod(),
+                request.getRequestURI(),
+                ex
+        );
+
         return new ApiErrorResponse(
-                java.time.LocalDateTime.now(),
+                LocalDateTime.now(),
                 500,
                 "Internal Server Error",
                 "Une erreur interne est survenue",

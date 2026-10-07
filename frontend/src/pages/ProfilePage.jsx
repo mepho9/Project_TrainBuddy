@@ -28,6 +28,7 @@ const EMPTY_SUBSCRIPTION = {
 
 export default function ProfilePage({
   onLogout,
+  section = "overview",
 }) {
   const {
     t,
@@ -60,8 +61,8 @@ export default function ProfilePage({
   );
 
   const [
-    activeTab,
-    setActiveTab,
+    activeSessionTab,
+    setActiveSessionTab,
   ] = useState(
     "created"
   );
@@ -69,11 +70,6 @@ export default function ProfilePage({
   const [
     loading,
     setLoading,
-  ] = useState(true);
-
-  const [
-    subscriptionLoading,
-    setSubscriptionLoading,
   ] = useState(true);
 
   const [
@@ -116,10 +112,6 @@ export default function ProfilePage({
 
   const fetchSubscription =
     async () => {
-      setSubscriptionLoading(
-        true
-      );
-
       try {
         const response =
           await api.get(
@@ -142,16 +134,217 @@ export default function ProfilePage({
         console.error(
           error
         );
+      }
+    };
+
+  useEffect(() => {
+    let cancelled =
+      false;
+
+    let timer =
+      null;
+
+    void (async () => {
+
+      try {
+        /*
+         * APERÇU :
+         * on charge uniquement l'abonnement.
+         */
+        if (
+          section ===
+          "overview"
+        ) {
+
+          const params =
+            new URLSearchParams(
+              window.location.search
+            );
+
+          const checkout =
+            params.get(
+              "checkout"
+            );
+
+          if (checkout) {
+            window.history
+              .replaceState(
+                {},
+                "",
+                window.location.pathname
+              );
+          }
+
+          const response =
+            await api.get(
+              "/subscriptions/me"
+            );
+
+          if (cancelled) {
+            return;
+          }
+
+          setSubscription(
+            response.data
+          );
+
+          if (
+            checkout ===
+            "success"
+          ) {
+
+            setMessage(
+              t(
+                "subscription.checkoutProcessing"
+              )
+            );
+
+            timer =
+              window.setTimeout(
+                async () => {
+
+                  try {
+                    const refresh =
+                      await api.get(
+                        "/subscriptions/me"
+                      );
+
+                    if (
+                      cancelled
+                    ) {
+                      return;
+                    }
+
+                    setSubscription(
+                      refresh.data
+                    );
+
+                    setMessage(
+                      t(
+                        "subscription.checkoutUpdated"
+                      )
+                    );
+
+                  } catch (
+                    error
+                  ) {
+
+                    if (
+                      cancelled
+                    ) {
+                      return;
+                    }
+
+                    console.error(
+                      error
+                    );
+                  }
+                },
+
+                2000
+              );
+          }
+
+          if (
+            checkout ===
+            "cancelled"
+          ) {
+            setMessage(
+              t(
+                "subscription.checkoutCancelled"
+              )
+            );
+          }
+        }
+
+        /*
+         * MES SESSIONS :
+         * on charge uniquement cette partie.
+         */
+        if (
+          section ===
+          "sessions"
+        ) {
+
+          const response =
+            await api.get(
+              "/sessions/my"
+            );
+
+          if (cancelled) {
+            return;
+          }
+
+          setMySessions({
+            created:
+              response.data.created ||
+              [],
+
+            joined:
+              response.data.joined ||
+              [],
+          });
+        }
+
+      } catch (error) {
+
+        if (
+          cancelled
+        ) {
+          return;
+        }
+
+        setMessage(
+          error.response?.data
+            ?.message ||
+            (
+              section ===
+              "overview"
+                ? t(
+                    "subscription.loadError"
+                  )
+                : t(
+                    "profile.sessionsLoadError"
+                  )
+            )
+        );
+
+        console.error(
+          error
+        );
 
       } finally {
-        setSubscriptionLoading(
-          false
+
+        if (
+          !cancelled
+        ) {
+          setLoading(
+            false
+          );
+        }
+      }
+    })();
+
+    return () => {
+
+      cancelled =
+        true;
+
+      if (timer) {
+        window.clearTimeout(
+          timer
         );
       }
     };
 
+  }, [
+    section,
+    t,
+  ]);
+
   const startPremiumCheckout =
     async () => {
+
       try {
         const response =
           await api.post(
@@ -162,6 +355,7 @@ export default function ProfilePage({
           response.data.url;
 
       } catch (error) {
+
         setMessage(
           error.response?.data
             ?.message ||
@@ -178,6 +372,7 @@ export default function ProfilePage({
 
   const cancelPremium =
     async () => {
+
       const confirmed =
         window.confirm(
           t(
@@ -206,6 +401,7 @@ export default function ProfilePage({
         );
 
       } catch (error) {
+
         setMessage(
           error.response?.data
             ?.message ||
@@ -224,6 +420,7 @@ export default function ProfilePage({
     async (
       sessionId
     ) => {
+
       const confirmed =
         window.confirm(
           t(
@@ -252,6 +449,7 @@ export default function ProfilePage({
         ]);
 
       } catch (error) {
+
         setMessage(
           error.response?.data
             ?.message ||
@@ -270,6 +468,7 @@ export default function ProfilePage({
     async (
       sessionId
     ) => {
+
       const confirmed =
         window.confirm(
           t(
@@ -295,6 +494,7 @@ export default function ProfilePage({
         await fetchMySessions();
 
       } catch (error) {
+
         setMessage(
           error.response?.data
             ?.message ||
@@ -309,353 +509,139 @@ export default function ProfilePage({
       }
     };
 
-  /*
-   * Chargement initial.
-   *
-   * On fait les appels réseau directement
-   * dans la tâche asynchrone du useEffect.
-   *
-   * Les setState arrivent après les await.
-   */
-  useEffect(() => {
-    let cancelled =
-      false;
+  if (loading) {
+    return (
+      <section className="session-card">
 
-    let timer =
-      null;
-
-    const params =
-      new URLSearchParams(
-        window.location.search
-      );
-
-    const checkout =
-      params.get(
-        "checkout"
-      );
-
-    if (checkout) {
-      window.history
-        .replaceState(
-          {},
-          "",
-          window.location.pathname
-        );
-    }
-
-    void (async () => {
-      try {
-        const [
-          sessionsResponse,
-          subscriptionResponse,
-        ] =
-          await Promise.all([
-            api.get(
-              "/sessions/my"
-            ),
-
-            api.get(
-              "/subscriptions/me"
-            ),
-          ]);
-
-        if (cancelled) {
-          return;
-        }
-
-        setMySessions({
-          created:
-            sessionsResponse
-              .data.created ||
-            [],
-
-          joined:
-            sessionsResponse
-              .data.joined ||
-            [],
-        });
-
-        setSubscription(
-          subscriptionResponse.data
-        );
-
-        if (
-          checkout ===
-          "success"
-        ) {
-          setMessage(
-            t(
-              "subscription.checkoutProcessing"
-            )
-          );
-
-          timer =
-            window.setTimeout(
-              async () => {
-                try {
-                  const response =
-                    await api.get(
-                      "/subscriptions/me"
-                    );
-
-                  if (
-                    cancelled
-                  ) {
-                    return;
-                  }
-
-                  setSubscription(
-                    response.data
-                  );
-
-                  setMessage(
-                    t(
-                      "subscription.checkoutUpdated"
-                    )
-                  );
-
-                } catch (error) {
-                  if (
-                    cancelled
-                  ) {
-                    return;
-                  }
-
-                  setMessage(
-                    error.response
-                      ?.data
-                      ?.message ||
-                    t(
-                      "subscription.loadError"
-                    )
-                  );
-
-                  console.error(
-                    error
-                  );
-                }
-              },
-
-              2000
-            );
-        }
-
-        if (
-          checkout ===
-          "cancelled"
-        ) {
-          setMessage(
-            t(
-              "subscription.checkoutCancelled"
-            )
-          );
-        }
-
-      } catch (error) {
-        if (cancelled) {
-          return;
-        }
-
-        setMessage(
-          error.response?.data
-            ?.message ||
-            t(
-              "profile.sessionsLoadError"
-            )
-        );
-
-        console.error(
-          error
-        );
-
-      } finally {
-        if (
-          !cancelled
-        ) {
-          setLoading(
-            false
-          );
-
-          setSubscriptionLoading(
-            false
-          );
-        }
-      }
-    })();
-
-    return () => {
-      cancelled =
-        true;
-
-      if (timer) {
-        window.clearTimeout(
-          timer
-        );
-      }
-    };
-
-  }, [t]);
-
-  const displayedSessions =
-    activeTab ===
-    "created"
-      ? mySessions.created
-      : mySessions.joined;
-
-  const premiumPrice =
-    (
-      subscription
-        .priceCents / 100
-    ).toFixed(2);
-
-  const sessionLimitReached =
-    subscription
-      .activeCreatedSessions >=
-    subscription
-      .maxActiveSessions;
-
-  return (
-    <main className="content">
-
-      <section className="hero-section">
-
-        <p className="eyebrow">
+        <h3>
           {t(
-            "profile.eyebrow"
+            "common.loading"
           )}
-        </p>
-
-        <h2>
-          {t(
-            "profile.title"
-          )}
-        </h2>
-
-        <p>
-          {t(
-            "profile.description"
-          )}
-        </p>
+        </h3>
 
       </section>
+    );
+  }
 
-      {message && (
-        <div className="page-message">
-          {message}
-        </div>
-      )}
+  /*
+   * =========================
+   * APERÇU
+   * =========================
+   */
+  if (
+    section ===
+    "overview"
+  ) {
 
-      <section
-        className="profile-card"
-        style={{
-          marginBottom:
-            "28px",
-        }}
-      >
+    const premiumPrice =
+      (
+        subscription
+          .priceCents /
+        100
+      ).toFixed(2);
 
-        <div className="profile-avatar">
-          👤
-        </div>
+    const sessionLimitReached =
+      subscription
+        .activeCreatedSessions >=
+      subscription
+        .maxActiveSessions;
 
-        <div
+    return (
+      <>
+
+        {message && (
+          <div className="page-message">
+            {message}
+          </div>
+        )}
+
+        <section
+          className="profile-card"
           style={{
-            flex: 1,
+            marginBottom:
+              "28px",
           }}
         >
 
-          <h3>
-            {email}
-          </h3>
+          <div className="profile-avatar">
+            👤
+          </div>
 
-          <p>
-            {t(
-              "profile.role"
-            )}
-            : {role}
-          </p>
+          <div
+            style={{
+              flex: 1,
+            }}
+          >
 
-          {subscription.premium && (
+            <h3>
+              {email}
+            </h3>
 
-            <p
-              style={{
-                fontWeight:
-                  700,
-              }}
-            >
+            <p>
               {t(
-                "profile.premiumMember"
+                "profile.role"
               )}
+              : {role}
             </p>
-          )}
 
-        </div>
+            {subscription.premium && (
 
-        <button
-          className="logout-btn"
-          onClick={
-            onLogout
-          }
-        >
-          {t(
-            "nav.logout"
-          )}
-        </button>
-
-      </section>
-
-      <section className="hero-section">
-
-        <p className="eyebrow">
-          {t(
-            "subscription.eyebrow"
-          )}
-        </p>
-
-        <h2>
-          {subscription.premium
-            ? t(
-                "subscription.premiumName"
-              )
-            : t(
-                "subscription.standardName"
-              )}
-        </h2>
-
-        <p>
-          {subscription.premium
-            ? t(
-                "subscription.premiumDescription"
-              )
-            : t(
-                "subscription.standardDescription"
-              )}
-        </p>
-
-      </section>
-
-      {subscriptionLoading ? (
-
-        <section className="session-card">
-
-          <h3>
-            {t(
-              "common.loading"
+              <p
+                style={{
+                  fontWeight:
+                    700,
+                }}
+              >
+                {t(
+                  "profile.premiumMember"
+                )}
+              </p>
             )}
-          </h3>
+
+          </div>
+
+          <button
+            className="logout-btn"
+            onClick={
+              onLogout
+            }
+          >
+            {t(
+              "nav.logout"
+            )}
+          </button>
 
         </section>
-
-      ) : (
 
         <section
           className="session-card"
           style={{
             marginBottom:
-              "32px",
+              "28px",
           }}
         >
 
+          <p className="eyebrow">
+            {t(
+              "subscription.eyebrow"
+            )}
+          </p>
+
           <div className="session-card-header">
+
+            <h2
+              style={{
+                margin: 0,
+              }}
+            >
+              {subscription.premium
+                ? t(
+                    "subscription.premiumName"
+                  )
+                : t(
+                    "subscription.standardName"
+                  )}
+            </h2>
 
             <span className="badge">
               {
@@ -663,29 +649,19 @@ export default function ProfilePage({
               }
             </span>
 
-            <span className="capacity">
-
-              {subscription.premium
-                ? `${premiumPrice} € / ${t(
-                    "subscription.month"
-                  )}`
-                : t(
-                    "subscription.free"
-                  )}
-
-            </span>
-
           </div>
 
-          <h3>
+          <p className="description">
+
             {subscription.premium
               ? t(
-                  "subscription.premiumName"
+                  "subscription.premiumDescription"
                 )
               : t(
-                  "subscription.standardName"
+                  "subscription.standardDescription"
                 )}
-          </h3>
+
+          </p>
 
           <div className="session-meta">
 
@@ -786,6 +762,24 @@ export default function ProfilePage({
 
           </div>
 
+          <div
+            style={{
+              marginTop:
+                "20px",
+
+              fontWeight:
+                700,
+            }}
+          >
+            {subscription.premium
+              ? `${premiumPrice} € / ${t(
+                  "subscription.month"
+                )}`
+              : t(
+                  "subscription.free"
+                )}
+          </div>
+
           {sessionLimitReached && (
 
             <div
@@ -817,7 +811,7 @@ export default function ProfilePage({
             <div
               style={{
                 marginTop:
-                  "20px",
+                  "24px",
               }}
             >
 
@@ -855,7 +849,7 @@ export default function ProfilePage({
               className="secondary-btn"
               style={{
                 marginTop:
-                  "20px",
+                  "24px",
               }}
               onClick={
                 cancelPremium
@@ -885,9 +879,38 @@ export default function ProfilePage({
           )}
 
         </section>
+
+      </>
+    );
+  }
+
+  /*
+   * =========================
+   * MES SESSIONS
+   * =========================
+   */
+  const displayedSessions =
+    activeSessionTab ===
+    "created"
+      ? mySessions.created
+      : mySessions.joined;
+
+  return (
+    <>
+
+      {message && (
+        <div className="page-message">
+          {message}
+        </div>
       )}
 
-      <section className="hero-section">
+      <section
+        className="session-card"
+        style={{
+          marginBottom:
+            "24px",
+        }}
+      >
 
         <p className="eyebrow">
           {t(
@@ -901,7 +924,7 @@ export default function ProfilePage({
           )}
         </h2>
 
-        <p>
+        <p className="description">
           {t(
             "profile.sessionsDescription"
           )}
@@ -922,17 +945,18 @@ export default function ProfilePage({
 
         <button
           className={
-            activeTab ===
+            activeSessionTab ===
             "created"
               ? "active"
               : ""
           }
           onClick={() =>
-            setActiveTab(
+            setActiveSessionTab(
               "created"
             )
           }
         >
+
           {t(
             "profile.created"
           )}{" "}
@@ -943,21 +967,23 @@ export default function ProfilePage({
               .length
           }
           )
+
         </button>
 
         <button
           className={
-            activeTab ===
+            activeSessionTab ===
             "joined"
               ? "active"
               : ""
           }
           onClick={() =>
-            setActiveTab(
+            setActiveSessionTab(
               "joined"
             )
           }
         >
+
           {t(
             "profile.joined"
           )}{" "}
@@ -968,30 +994,13 @@ export default function ProfilePage({
               .length
           }
           )
+
         </button>
 
       </div>
 
-      {loading ? (
-
-        <section className="session-card">
-
-          <h3>
-            {t(
-              "common.loading"
-            )}
-          </h3>
-
-          <p className="description">
-            {t(
-              "common.loading"
-            )}
-          </p>
-
-        </section>
-
-      ) : displayedSessions.length ===
-        0 ? (
+      {displayedSessions.length ===
+      0 ? (
 
         <section className="session-card">
 
@@ -1003,7 +1012,7 @@ export default function ProfilePage({
 
           <p className="description">
 
-            {activeTab ===
+            {activeSessionTab ===
             "created"
               ? t(
                   "profile.noCreated"
@@ -1044,11 +1053,9 @@ export default function ProfilePage({
                     .premiumHighlighted && (
 
                     <span className="capacity">
-
                       {t(
                         "sessions.premium"
                       )}
-
                     </span>
                   )}
 
@@ -1118,7 +1125,7 @@ export default function ProfilePage({
 
                 </div>
 
-                {activeTab ===
+                {activeSessionTab ===
                   "created" &&
                   session.status ===
                     "UPCOMING" && (
@@ -1144,7 +1151,7 @@ export default function ProfilePage({
                   </button>
                 )}
 
-                {activeTab ===
+                {activeSessionTab ===
                   "joined" &&
                   session.status ===
                     "UPCOMING" && (
@@ -1207,7 +1214,7 @@ export default function ProfilePage({
         </section>
       )}
 
-    </main>
+    </>
   );
 }
 

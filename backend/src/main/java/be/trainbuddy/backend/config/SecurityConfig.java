@@ -64,13 +64,6 @@ public class SecurityConfig {
                                 "/api/v1/auth/**"
                         ).permitAll()
 
-                        /*
-                         * Stripe doit pouvoir appeler
-                         * ce endpoint depuis ses serveurs.
-                         *
-                         * La sécurité repose ici sur la
-                         * signature Stripe et non JWT.
-                         */
                         .requestMatchers(
                                 HttpMethod.POST,
                                 "/api/v1/stripe/webhook"
@@ -82,6 +75,10 @@ public class SecurityConfig {
 
                         .requestMatchers(
                                 "/api/v1/subscriptions/**"
+                        ).hasRole("MEMBER")
+
+                        .requestMatchers(
+                                "/api/v1/profile/**"
                         ).hasRole("MEMBER")
 
                         .requestMatchers(

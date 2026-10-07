@@ -11,6 +11,9 @@ import {
 import translations
   from "./translations";
 
+import profileTranslations
+  from "./profileTranslations";
+
 const LanguageContext =
   createContext(null);
 
@@ -103,9 +106,15 @@ export function LanguageProvider({
         variables = {}
       ) => {
         const translatedValue =
+          profileTranslations[
+            language
+          ]?.[key] ??
           translations[
             language
           ]?.[key] ??
+          profileTranslations.fr?.[
+            key
+          ] ??
           translations.fr?.[
             key
           ] ??
@@ -120,8 +129,7 @@ export function LanguageProvider({
       locale:
         language === "en"
           ? "en-GB"
-          : language ===
-            "nl"
+          : language === "nl"
           ? "nl-BE"
           : "fr-BE",
     }),
