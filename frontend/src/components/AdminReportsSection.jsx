@@ -3,8 +3,21 @@ import {
   useState,
 } from "react";
 
+import {
+  CalendarDays,
+  CircleCheck,
+  Dumbbell,
+  Flag,
+  History,
+  Search,
+  ShieldCheck,
+  UserRound,
+} from "lucide-react";
+
 import { useLanguage }
   from "../i18n/LanguageContext";
+
+import "../styles/admin.css";
 
 export default function AdminReportsSection({
   reports,
@@ -66,6 +79,7 @@ export default function AdminReportsSection({
           );
         }
       );
+
     }, [
       reports,
       search,
@@ -85,11 +99,20 @@ export default function AdminReportsSection({
       ).toLocaleString(
         locale,
         {
-          day: "2-digit",
-          month: "2-digit",
-          year: "numeric",
-          hour: "2-digit",
-          minute: "2-digit",
+          day:
+            "2-digit",
+
+          month:
+            "2-digit",
+
+          year:
+            "numeric",
+
+          hour:
+            "2-digit",
+
+          minute:
+            "2-digit",
         }
       );
     };
@@ -97,9 +120,9 @@ export default function AdminReportsSection({
   return (
     <>
 
-      <section className="create-session-form">
+      <section className="admin-filter-panel">
 
-        <div className="form-grid">
+        <div className="admin-filter-grid">
 
           <div className="form-row">
 
@@ -109,18 +132,28 @@ export default function AdminReportsSection({
               )}
             </label>
 
-            <input
-              type="text"
-              placeholder={t(
-                "admin.reportSearch"
-              )}
-              value={search}
-              onChange={(event) =>
-                setSearch(
-                  event.target.value
-                )
-              }
-            />
+            <div className="admin-input-with-icon">
+
+              <Search
+                size={16}
+              />
+
+              <input
+                type="text"
+                placeholder={t(
+                  "admin.reportSearch"
+                )}
+                value={
+                  search
+                }
+                onChange={(event) =>
+                  setSearch(
+                    event.target.value
+                  )
+                }
+              />
+
+            </div>
 
           </div>
 
@@ -133,7 +166,9 @@ export default function AdminReportsSection({
             </label>
 
             <select
-              value={status}
+              value={
+                status
+              }
               onChange={(event) =>
                 setStatus(
                   event.target.value
@@ -173,20 +208,38 @@ export default function AdminReportsSection({
 
       </section>
 
-      <p className="empty-text">
-        {t(
-          "admin.reportCount",
-          {
-            count:
-              filteredReports.length,
-          }
-        )}
-      </p>
+      <div className="admin-list-heading">
+
+        <div>
+
+          <p className="eyebrow">
+            {t(
+              "admin.reports"
+            )}
+          </p>
+
+          <strong>
+            {t(
+              "admin.reportCount",
+              {
+                count:
+                  filteredReports.length,
+              }
+            )}
+          </strong>
+
+        </div>
+
+      </div>
 
       {filteredReports.length ===
       0 ? (
 
-        <section className="session-card">
+        <section className="admin-empty-state">
+
+          <Flag
+            size={24}
+          />
 
           <h3>
             {t(
@@ -194,7 +247,7 @@ export default function AdminReportsSection({
             )}
           </h3>
 
-          <p className="description">
+          <p>
             {t(
               "admin.noReportsDescription"
             )}
@@ -204,25 +257,41 @@ export default function AdminReportsSection({
 
       ) : (
 
-        <section className="sessions-grid">
+        <section className="admin-cards-grid admin-reports-grid">
 
           {filteredReports.map(
             (report) => (
 
               <article
-                className="session-card"
-                key={report.id}
+                className="admin-card admin-report-card"
+                key={
+                  report.id
+                }
               >
 
-                <div className="session-card-header">
+                <div className="admin-card-header">
 
-                  <span className="badge">
+                  <span
+                    className={`admin-report-status status-${report.status.toLowerCase()}`}
+                  >
                     {t(
                       `status.${report.status}`
                     )}
                   </span>
 
-                  <span className="capacity">
+                  <span className="admin-target-badge">
+
+                    {report.targetType ===
+                    "USER" ? (
+                      <UserRound
+                        size={13}
+                      />
+                    ) : (
+                      <Dumbbell
+                        size={13}
+                      />
+                    )}
+
                     {report.targetType ===
                     "USER"
                       ? t(
@@ -231,134 +300,182 @@ export default function AdminReportsSection({
                       : t(
                           "admin.sessions"
                         )}
+
                   </span>
 
                 </div>
 
-                <h3>
-                  {t(
-                    `reason.${report.reason}`
-                  )}
-                </h3>
+                <div className="admin-report-title">
 
-                <p className="description">
-                  {report.details ||
-                    "—"}
-                </p>
+                  <div className="admin-card-icon report-icon">
+                    <Flag
+                      size={18}
+                    />
+                  </div>
 
-                <div className="session-meta">
+                  <div>
 
-                  <span>
-                    🚩{" "}
-                    {t(
+                    <h3>
+                      {t(
+                        `reason.${report.reason}`
+                      )}
+                    </h3>
+
+                    <p>
+                      {report.details ||
+                        t(
+                          "common.unknown"
+                        )}
+                    </p>
+
+                  </div>
+
+                </div>
+
+                <div className="admin-meta">
+
+                  <ReportMetaRow
+                    icon={
+                      UserRound
+                    }
+                    label={t(
                       "admin.author"
                     )}
-                    :{" "}
-                    {
-                      report.reporterEmail
+                    value={
+                      report
+                        .reporterEmail
                     }
-                  </span>
+                  />
 
                   {report.targetType ===
                     "USER" && (
                     <>
-                      <span>
-                        👤{" "}
-                        {t(
+
+                      <ReportMetaRow
+                        icon={
+                          UserRound
+                        }
+                        label={t(
                           "admin.reportedAccount"
                         )}
-                        :{" "}
-                        {
-                          report.targetUserEmail
+                        value={
+                          report
+                            .targetUserEmail
                         }
-                      </span>
+                      />
 
-                      <span>
-                        {t(
+                      <ReportMetaRow
+                        icon={
+                          ShieldCheck
+                        }
+                        label={t(
                           "admin.accountState"
                         )}
-                        :{" "}
-                        {report.targetUserBanned
-                          ? t(
-                              "admin.ban"
-                            )
-                          : t(
-                              "common.active"
-                            )}
-                      </span>
+                        value={
+                          report
+                            .targetUserBanned
+                            ? t(
+                                "admin.ban"
+                              )
+                            : t(
+                                "common.active"
+                              )
+                        }
+                      />
 
-                      {report.targetSessionTitle && (
-                        <span>
-                          🏋️{" "}
-                          {t(
+                      {report
+                        .targetSessionTitle && (
+
+                        <ReportMetaRow
+                          icon={
+                            Dumbbell
+                          }
+                          label={t(
                             "admin.context"
                           )}
-                          :{" "}
-                          {
-                            report.targetSessionTitle
+                          value={
+                            report
+                              .targetSessionTitle
                           }
-                        </span>
+                        />
                       )}
+
                     </>
                   )}
 
                   {report.targetType ===
                     "SESSION" && (
                     <>
-                      <span>
-                        🏋️{" "}
-                        {
-                          report.targetSessionTitle
-                        }
-                      </span>
 
-                      <span>
-                        {t(
+                      <ReportMetaRow
+                        icon={
+                          Dumbbell
+                        }
+                        label={t(
+                          "admin.sessions"
+                        )}
+                        value={
+                          report
+                            .targetSessionTitle
+                        }
+                      />
+
+                      <ReportMetaRow
+                        icon={
+                          ShieldCheck
+                        }
+                        label={t(
                           "admin.status"
                         )}
-                        :{" "}
-                        {t(
+                        value={t(
                           `status.${report.targetSessionStatus}`
                         )}
-                      </span>
+                      />
+
                     </>
                   )}
 
-                  <span>
-                    📅{" "}
-                    {t(
+                  <ReportMetaRow
+                    icon={
+                      CalendarDays
+                    }
+                    label={t(
                       "admin.createdAt"
                     )}
-                    :{" "}
-                    {formatDate(
+                    value={formatDate(
                       report.createdAt
                     )}
-                  </span>
+                  />
 
                   {report.reviewedAt && (
-                    <span>
-                      🔎{" "}
-                      {t(
+
+                    <ReportMetaRow
+                      icon={
+                        CircleCheck
+                      }
+                      label={t(
                         "admin.reviewedAt"
                       )}
-                      :{" "}
-                      {formatDate(
+                      value={formatDate(
                         report.reviewedAt
                       )}
-                    </span>
+                    />
                   )}
 
                   {report.reviewedByEmail && (
-                    <span>
-                      🛡️{" "}
-                      {t(
+
+                    <ReportMetaRow
+                      icon={
+                        ShieldCheck
+                      }
+                      label={t(
                         "admin.admin"
                       )}
-                      :{" "}
-                      {
-                        report.reviewedByEmail
+                      value={
+                        report
+                          .reviewedByEmail
                       }
-                    </span>
+                    />
                   )}
 
                 </div>
@@ -366,62 +483,62 @@ export default function AdminReportsSection({
                 {report.actions?.length >
                   0 && (
 
-                  <div
-                    style={{
-                      marginTop:
-                        "18px",
-                      padding:
-                        "14px",
-                      background:
-                        "#f8fafc",
-                      borderRadius:
-                        "12px",
-                    }}
-                  >
+                  <div className="admin-history">
 
-                    <strong>
-                      {t(
-                        "admin.history"
+                    <div className="admin-history-title">
+
+                      <History
+                        size={15}
+                      />
+
+                      <strong>
+                        {t(
+                          "admin.history"
+                        )}
+                      </strong>
+
+                    </div>
+
+                    <div className="admin-history-list">
+
+                      {report.actions.map(
+                        (action) => (
+
+                          <div
+                            className="admin-history-item"
+                            key={
+                              action.id
+                            }
+                          >
+
+                            <strong>
+                              {t(
+                                `action.${action.actionType}`
+                              )}
+                            </strong>
+
+                            <span>
+                              {
+                                action.adminEmail
+                              }
+                            </span>
+
+                            <time>
+                              {formatDate(
+                                action.createdAt
+                              )}
+                            </time>
+
+                          </div>
+                        )
                       )}
-                    </strong>
 
-                    {report.actions.map(
-                      (action) => (
-
-                        <p
-                          key={
-                            action.id
-                          }
-                          style={{
-                            margin:
-                              "8px 0 0",
-                          }}
-                        >
-                          {t(
-                            `action.${action.actionType}`
-                          )}
-                          {" — "}
-                          {
-                            action.adminEmail
-                          }
-                          {" — "}
-                          {formatDate(
-                            action.createdAt
-                          )}
-                        </p>
-                      )
-                    )}
+                    </div>
 
                   </div>
                 )}
 
-                <div
-                  className="card-actions"
-                  style={{
-                    marginTop:
-                      "18px",
-                  }}
-                >
+                <div className="admin-card-actions">
 
                   {report.status ===
                     "OPEN" && (
@@ -443,6 +560,7 @@ export default function AdminReportsSection({
                   {report.status ===
                     "REVIEWED" && (
                     <>
+
                       <button
                         className="secondary-btn"
                         onClick={() =>
@@ -462,13 +580,7 @@ export default function AdminReportsSection({
                           "UPCOMING" && (
 
                         <button
-                          className="secondary-btn"
-                          style={{
-                            color:
-                              "#dc2626",
-                            background:
-                              "#fef2f2",
-                          }}
+                          className="admin-danger-btn"
                           onClick={() =>
                             onCancelSession(
                               report
@@ -483,16 +595,11 @@ export default function AdminReportsSection({
 
                       {report.targetType ===
                         "USER" &&
-                        !report.targetUserBanned && (
+                        !report
+                          .targetUserBanned && (
 
                         <button
-                          className="secondary-btn"
-                          style={{
-                            color:
-                              "#dc2626",
-                            background:
-                              "#fef2f2",
-                          }}
+                          className="admin-danger-btn"
                           onClick={() =>
                             onBanUser(
                               report
@@ -504,6 +611,7 @@ export default function AdminReportsSection({
                           )}
                         </button>
                       )}
+
                     </>
                   )}
 
@@ -530,5 +638,33 @@ export default function AdminReportsSection({
       )}
 
     </>
+  );
+}
+
+function ReportMetaRow({
+  icon: Icon,
+  label,
+  value,
+}) {
+  return (
+    <div className="admin-meta-row">
+
+      <Icon
+        size={15}
+      />
+
+      <div>
+
+        <span>
+          {label}
+        </span>
+
+        <strong>
+          {value}
+        </strong>
+
+      </div>
+
+    </div>
   );
 }

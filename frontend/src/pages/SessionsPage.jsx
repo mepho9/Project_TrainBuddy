@@ -3,6 +3,16 @@ import {
   useState,
 } from "react";
 
+import {
+  CalendarClock,
+  Compass,
+  Dumbbell,
+  LockKeyhole,
+  MapPin,
+  Timer,
+  Users,
+} from "lucide-react";
+
 import api from "../api/axios";
 
 import ReportPanel
@@ -750,12 +760,6 @@ export default function SessionsPage() {
         );
     };
 
-  /*
-   * Chargement initial.
-   *
-   * Pas d'appel à une fonction qui déclenche
-   * immédiatement setState depuis le useEffect.
-   */
   useEffect(() => {
     let cancelled =
       false;
@@ -844,6 +848,7 @@ export default function SessionsPage() {
   if (selectedSession) {
     return (
       <div className="app-page">
+
         <main className="content">
 
           <button
@@ -902,7 +907,7 @@ export default function SessionsPage() {
               {selectedSession
                 .premiumHighlighted && (
 
-                <span className="capacity">
+                <span className="premium-badge">
                   {t(
                     "sessions.premium"
                   )}
@@ -926,109 +931,172 @@ export default function SessionsPage() {
 
             <div className="session-detail-info">
 
-              <span>
-                🏋️{" "}
-                {t(
-                  "sessions.activity"
-                )}
-                :{" "}
-                {activityLabel(
-                  selectedSession
-                    .activityType,
-                  t
-                )}
+              <span className="session-info-item">
+
+                <Dumbbell size={17} />
+
+                <span>
+
+                  <strong>
+                    {t(
+                      "sessions.activity"
+                    )}
+                  </strong>
+
+                  {activityLabel(
+                    selectedSession
+                      .activityType,
+                    t
+                  )}
+
+                </span>
+
               </span>
 
-              <span>
-                📍{" "}
-                {t(
-                  "sessions.gym"
-                )}
-                :{" "}
-                {
-                  selectedSession.gymName
-                }
+              <span className="session-info-item">
+
+                <MapPin size={17} />
+
+                <span>
+
+                  <strong>
+                    {t(
+                      "sessions.gym"
+                    )}
+                  </strong>
+
+                  {
+                    selectedSession.gymName
+                  }
+
+                </span>
+
               </span>
 
               {selectedSession
                 .distanceKm !=
                 null && (
 
-                <span>
-                  🧭{" "}
-                  {t(
-                    "sessions.distance"
-                  )}
-                  :{" "}
-                  {formatDistance(
-                    selectedSession
-                      .distanceKm,
-                    t
-                  )}
+                <span className="session-info-item">
+
+                  <Compass size={17} />
+
+                  <span>
+
+                    <strong>
+                      {t(
+                        "sessions.distance"
+                      )}
+                    </strong>
+
+                    {formatDistance(
+                      selectedSession
+                        .distanceKm,
+                      t
+                    )}
+
+                  </span>
+
                 </span>
               )}
 
-              <span>
-                🕒{" "}
-                {t(
-                  "sessions.date"
-                )}
-                :{" "}
-                {formatDate(
-                  selectedSession
-                    .startAt,
-                  locale
-                )}
-              </span>
+              <span className="session-info-item">
 
-              <span>
-                ⏱️{" "}
-                {t(
-                  "sessions.duration"
-                )}
-                :{" "}
-                {
-                  selectedSession
-                    .durationMin
-                }{" "}
-                {t(
-                  "common.minutes"
-                )}
-              </span>
+                <CalendarClock size={17} />
 
-              <span>
-                👥{" "}
-                {t(
-                  "sessions.participants"
-                )}
-                :{" "}
-                {
-                  selectedSession
-                    .participantCount ??
-                  participants.length
-                }{" "}
-                /{" "}
-                {
-                  selectedSession
-                    .capacity
-                }
-              </span>
+                <span>
 
-              <span>
-                🔒{" "}
-                {t(
-                  "sessions.visibility"
-                )}
-                :{" "}
-                {selectedSession
-                  .visibility ===
-                "PUBLIC"
-                  ? t(
-                      "sessions.public"
-                    )
-                  : t(
-                      "sessions.private"
+                  <strong>
+                    {t(
+                      "sessions.date"
                     )}
+                  </strong>
+
+                  {formatDate(
+                    selectedSession
+                      .startAt,
+                    locale
+                  )}
+
+                </span>
+
+              </span>
+
+              <span className="session-info-item">
+
+                <Timer size={17} />
+
+                <span>
+
+                  <strong>
+                    {t(
+                      "sessions.duration"
+                    )}
+                  </strong>
+
+                  {
+                    selectedSession
+                      .durationMin
+                  }{" "}
+                  {t(
+                    "common.minutes"
+                  )}
+
+                </span>
+
+              </span>
+
+              <span className="session-info-item">
+
+                <Users size={17} />
+
+                <span>
+
+                  <strong>
+                    {t(
+                      "sessions.participants"
+                    )}
+                  </strong>
+
+                  {
+                    selectedSession
+                      .participantCount ??
+                    participants.length
+                  }{" "}
+                  /{" "}
+                  {
+                    selectedSession
+                      .capacity
+                  }
+
+                </span>
+
+              </span>
+
+              <span className="session-info-item">
+
+                <LockKeyhole size={17} />
+
+                <span>
+
+                  <strong>
+                    {t(
+                      "sessions.visibility"
+                    )}
+                  </strong>
+
+                  {selectedSession
+                    .visibility ===
+                  "PUBLIC"
+                    ? t(
+                        "sessions.public"
+                      )
+                    : t(
+                        "sessions.private"
+                      )}
+
+                </span>
+
               </span>
 
             </div>
@@ -1373,6 +1441,7 @@ export default function SessionsPage() {
           </section>
 
         </main>
+
       </div>
     );
   }
@@ -1395,6 +1464,7 @@ export default function SessionsPage() {
 
   return (
     <div className="app-page">
+
       <main className="content">
 
         <section className="hero-section">
@@ -1623,9 +1693,6 @@ export default function SessionsPage() {
                 {t(
                   "sessions.radius"
                 )}
-
-                {subscription.premium &&
-                  " ⭐"}
               </label>
 
               <select
@@ -1840,7 +1907,7 @@ export default function SessionsPage() {
                       "sessions.standard"
                     )}
 
-                {" — "}
+                {" · "}
 
                 {t(
                   "sessions.activeCreated",
@@ -2261,7 +2328,7 @@ export default function SessionsPage() {
                     {session
                       .premiumHighlighted ? (
 
-                      <span className="capacity">
+                      <span className="premium-badge">
                         {t(
                           "sessions.premium"
                         )}
@@ -2305,54 +2372,89 @@ export default function SessionsPage() {
 
                   <div className="session-meta">
 
-                    <span>
-                      📍{" "}
-                      {
-                        session.gymName
-                      }
+                    <span className="session-meta-item">
+
+                      <MapPin
+                        size={15}
+                      />
+
+                      <span>
+                        {
+                          session.gymName
+                        }
+                      </span>
+
                     </span>
 
                     {session.distanceKm !=
                       null && (
 
-                      <span>
-                        🧭{" "}
-                        {formatDistance(
-                          session
-                            .distanceKm,
-                          t
-                        )}
+                      <span className="session-meta-item">
+
+                        <Compass
+                          size={15}
+                        />
+
+                        <span>
+                          {formatDistance(
+                            session
+                              .distanceKm,
+                            t
+                          )}
+                        </span>
+
                       </span>
                     )}
 
-                    <span>
-                      🕒{" "}
-                      {formatDate(
-                        session.startAt,
-                        locale
-                      )}
+                    <span className="session-meta-item">
+
+                      <CalendarClock
+                        size={15}
+                      />
+
+                      <span>
+                        {formatDate(
+                          session.startAt,
+                          locale
+                        )}
+                      </span>
+
                     </span>
 
-                    <span>
-                      ⏱️{" "}
-                      {
-                        session.durationMin
-                      }{" "}
-                      {t(
-                        "common.minutes"
-                      )}
+                    <span className="session-meta-item">
+
+                      <Timer
+                        size={15}
+                      />
+
+                      <span>
+                        {
+                          session.durationMin
+                        }{" "}
+                        {t(
+                          "common.minutes"
+                        )}
+                      </span>
+
                     </span>
 
-                    <span>
-                      👥{" "}
-                      {
-                        session
-                          .participantCount
-                      }{" "}
-                      /{" "}
-                      {
-                        session.capacity
-                      }
+                    <span className="session-meta-item">
+
+                      <Users
+                        size={15}
+                      />
+
+                      <span>
+                        {
+                          session
+                            .participantCount
+                        }{" "}
+                        /{" "}
+                        {
+                          session.capacity
+                        }
+                      </span>
+
                     </span>
 
                   </div>
@@ -2378,6 +2480,7 @@ export default function SessionsPage() {
         )}
 
       </main>
+
     </div>
   );
 }

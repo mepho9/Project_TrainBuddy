@@ -4,6 +4,19 @@ import {
   useState,
 } from "react";
 
+import {
+  CalendarClock,
+  CalendarDays,
+  Dumbbell,
+  Flag,
+  MapPin,
+  Navigation,
+  ShieldCheck,
+  UserRound,
+  UsersRound,
+  Warehouse,
+} from "lucide-react";
+
 import api
   from "../api/axios";
 
@@ -13,6 +26,8 @@ import AdminReportsSection
 import { useLanguage }
   from "../i18n/LanguageContext";
 
+import "../styles/admin.css";
+
 const EMPTY_GYM = {
   name: "",
   type: "",
@@ -20,6 +35,21 @@ const EMPTY_GYM = {
   latitude: "",
   longitude: "",
 };
+
+function isDeletedAccount(
+  email
+) {
+  return (
+    typeof email ===
+      "string" &&
+    email.startsWith(
+      "deleted+"
+    ) &&
+    email.endsWith(
+      "@trainbuddy.invalid"
+    )
+  );
+}
 
 export default function AdminPage() {
   const { t } =
@@ -94,12 +124,6 @@ export default function AdminPage() {
     setEditingGymId,
   ] = useState(null);
 
-  /*
-   * =========================
-   * CHARGEMENT
-   * =========================
-   */
-
   const fetchUsers =
     async () => {
       const response =
@@ -148,14 +172,6 @@ export default function AdminPage() {
       );
     };
 
-  /*
-   * Chargement initial directement depuis
-   * les API.
-   *
-   * Les setState arrivent uniquement après
-   * les await et non synchroniquement dans
-   * le corps du useEffect.
-   */
   useEffect(() => {
     let cancelled =
       false;
@@ -224,9 +240,7 @@ export default function AdminPage() {
         );
 
       } finally {
-        if (
-          !cancelled
-        ) {
+        if (!cancelled) {
           setLoading(
             false
           );
@@ -241,14 +255,16 @@ export default function AdminPage() {
 
   }, [t]);
 
-  /*
-   * =========================
-   * UTILISATEURS
-   * =========================
-   */
-
   const banUser =
     async (user) => {
+      if (
+        isDeletedAccount(
+          user.email
+        )
+      ) {
+        return;
+      }
+
       const confirmed =
         window.confirm(
           t(
@@ -302,6 +318,14 @@ export default function AdminPage() {
 
   const unbanUser =
     async (user) => {
+      if (
+        isDeletedAccount(
+          user.email
+        )
+      ) {
+        return;
+      }
+
       const confirmed =
         window.confirm(
           t(
@@ -352,12 +376,6 @@ export default function AdminPage() {
       }
     };
 
-  /*
-   * =========================
-   * SALLES
-   * =========================
-   */
-
   const saveGym =
     async (event) => {
       event.preventDefault();
@@ -390,9 +408,7 @@ export default function AdminPage() {
       };
 
       try {
-        if (
-          editingGymId
-        ) {
+        if (editingGymId) {
           await api.put(
             `/admin/gyms/${editingGymId}`,
             payload
@@ -456,16 +472,13 @@ export default function AdminPage() {
           gym.type || "",
 
         address:
-          gym.address ||
-          "",
+          gym.address || "",
 
         latitude:
-          gym.latitude ??
-          "",
+          gym.latitude ?? "",
 
         longitude:
-          gym.longitude ??
-          "",
+          gym.longitude ?? "",
       });
 
       window.scrollTo({
@@ -547,12 +560,6 @@ export default function AdminPage() {
       }
     };
 
-  /*
-   * =========================
-   * SESSIONS
-   * =========================
-   */
-
   const cancelSession =
     async (session) => {
       const confirmed =
@@ -600,12 +607,6 @@ export default function AdminPage() {
         );
       }
     };
-
-  /*
-   * =========================
-   * SIGNALEMENTS
-   * =========================
-   */
 
   const reviewReport =
     async (report) => {
@@ -729,6 +730,15 @@ export default function AdminPage() {
 
   const banReportedUser =
     async (report) => {
+      if (
+        isDeletedAccount(
+          report
+            .targetUserEmail
+        )
+      ) {
+        return;
+      }
+
       const confirmed =
         window.confirm(
           t(
@@ -777,12 +787,6 @@ export default function AdminPage() {
       }
     };
 
-  /*
-   * =========================
-   * FILTRES
-   * =========================
-   */
-
   const filteredUsers =
     useMemo(() => {
       const query =
@@ -795,17 +799,31 @@ export default function AdminPage() {
       }
 
       return users.filter(
-        (user) =>
-          user.email
+        (user) => {
+          const deleted =
+            isDeletedAccount(
+              user.email
+            );
+
+          const searchable =
+            deleted
+              ? t(
+                  "admin.deletedAccount"
+                )
+              : user.email;
+
+          return searchable
             .toLowerCase()
             .includes(
               query
-            )
+            );
+        }
       );
 
     }, [
       users,
       userSearch,
+      t,
     ]);
 
   const filteredSessions =
@@ -819,27 +837,23 @@ export default function AdminPage() {
         (session) => {
           const matchesSearch =
             !query ||
-
             session.title
-              .toLowerCase()
+              ?.toLowerCase()
               .includes(
                 query
               ) ||
-
             session.activityType
-              .toLowerCase()
+              ?.toLowerCase()
               .includes(
                 query
               ) ||
-
             session.gymName
-              .toLowerCase()
+              ?.toLowerCase()
               .includes(
                 query
               ) ||
-
             session.creatorEmail
-              .toLowerCase()
+              ?.toLowerCase()
               .includes(
                 query
               );
@@ -862,10 +876,64 @@ export default function AdminPage() {
       sessionStatus,
     ]);
 
-  return (
-    <main className="content">
+  const openReportsCount =
+    reports.filter(
+      (report) =>
+        report.status !==
+        "CLOSED"
+    ).length;
 
-      <section className="hero-section">
+  const tabs = [
+    {
+      id: "users",
+      label:
+        t(
+          "admin.users"
+        ),
+      count:
+        users.length,
+      icon:
+        UsersRound,
+    },
+    {
+      id: "gyms",
+      label:
+        t(
+          "admin.gyms"
+        ),
+      count:
+        gyms.length,
+      icon:
+        Warehouse,
+    },
+    {
+      id: "sessions",
+      label:
+        t(
+          "admin.sessions"
+        ),
+      count:
+        sessions.length,
+      icon:
+        Dumbbell,
+    },
+    {
+      id: "reports",
+      label:
+        t(
+          "admin.reports"
+        ),
+      count:
+        openReportsCount,
+      icon:
+        Flag,
+    },
+  ];
+
+  return (
+    <main className="content admin-page">
+
+      <section className="hero-section admin-hero">
 
         <p className="eyebrow">
           {t(
@@ -893,118 +961,64 @@ export default function AdminPage() {
         </div>
       )}
 
-      <div
-        className="nav-tabs"
-        style={{
-          width:
-            "fit-content",
+      <div className="nav-tabs admin-tabs">
 
-          marginBottom:
-            "28px",
-        }}
-      >
+        {tabs.map(
+          (tab) => {
+            const Icon =
+              tab.icon;
 
-        <button
-          className={
-            activeTab ===
-            "users"
-              ? "active"
-              : ""
-          }
-          onClick={() =>
-            setActiveTab(
-              "users"
-            )
-          }
-        >
-          {t(
-            "admin.users"
-          )}{" "}
-          ({users.length})
-        </button>
+            return (
+              <button
+                key={
+                  tab.id
+                }
+                type="button"
+                className={
+                  activeTab ===
+                  tab.id
+                    ? "active"
+                    : ""
+                }
+                onClick={() =>
+                  setActiveTab(
+                    tab.id
+                  )
+                }
+              >
 
-        <button
-          className={
-            activeTab ===
-            "gyms"
-              ? "active"
-              : ""
-          }
-          onClick={() =>
-            setActiveTab(
-              "gyms"
-            )
-          }
-        >
-          {t(
-            "admin.gyms"
-          )}{" "}
-          ({gyms.length})
-        </button>
+                <Icon
+                  size={16}
+                />
 
-        <button
-          className={
-            activeTab ===
-            "sessions"
-              ? "active"
-              : ""
-          }
-          onClick={() =>
-            setActiveTab(
-              "sessions"
-            )
-          }
-        >
-          {t(
-            "admin.sessions"
-          )}{" "}
-          ({sessions.length})
-        </button>
+                <span>
+                  {tab.label}
+                </span>
 
-        <button
-          className={
-            activeTab ===
-            "reports"
-              ? "active"
-              : ""
+                <span className="admin-tab-count">
+                  {tab.count}
+                </span>
+
+              </button>
+            );
           }
-          onClick={() =>
-            setActiveTab(
-              "reports"
-            )
-          }
-        >
-          {t(
-            "admin.reports"
-          )}{" "}
-          (
-          {
-            reports.filter(
-              (report) =>
-                report.status !==
-                "CLOSED"
-            ).length
-          }
-          )
-        </button>
+        )}
 
       </div>
 
       {loading ? (
 
-        <section className="session-card">
+        <section className="admin-empty-state">
+
+          <ShieldCheck
+            size={24}
+          />
 
           <h3>
             {t(
               "common.loading"
             )}
           </h3>
-
-          <p className="description">
-            {t(
-              "common.loading"
-            )}
-          </p>
 
         </section>
 
@@ -1137,7 +1151,7 @@ function UsersSection({
   return (
     <>
 
-      <section className="create-session-form">
+      <section className="admin-filter-panel">
 
         <div className="form-row">
 
@@ -1157,8 +1171,7 @@ function UsersSection({
             }
             onChange={(event) =>
               setUserSearch(
-                event.target
-                  .value
+                event.target.value
               )
             }
           />
@@ -1167,182 +1180,247 @@ function UsersSection({
 
       </section>
 
-      <section className="sessions-grid">
+      {users.length === 0 ? (
 
-        {users.map(
-          (user) => {
-            const isCurrentAdmin =
-              user.email ===
-              currentEmail;
+        <AdminEmptyState
+          icon={UserRound}
+          title={t(
+            "admin.users"
+          )}
+        />
 
-            const isAdmin =
-              user.role ===
-              "ADMIN";
+      ) : (
 
-            return (
+        <section className="admin-cards-grid">
 
-              <article
-                className="session-card"
-                key={
-                  user.id
-                }
-              >
+          {users.map(
+            (user) => {
+              const deleted =
+                isDeletedAccount(
+                  user.email
+                );
 
-                <div className="session-card-header">
+              const isCurrentAdmin =
+                !deleted &&
+                user.email ===
+                  currentEmail;
 
-                  <span className="badge">
-                    {user.role ===
-                    "ADMIN"
-                      ? t(
-                          "admin.administrator"
-                        )
-                      : t(
-                          "common.member"
+              const isAdmin =
+                user.role ===
+                "ADMIN";
+
+              return (
+                <article
+                  className={`admin-card${
+                    deleted
+                      ? " deleted-account"
+                      : ""
+                  }`}
+                  key={
+                    user.id
+                  }
+                >
+
+                  <div className="admin-card-header">
+
+                    <span className="admin-role-badge">
+
+                      <ShieldCheck
+                        size={13}
+                      />
+
+                      {isAdmin
+                        ? t(
+                            "admin.administrator"
+                          )
+                        : t(
+                            "common.member"
+                          )}
+
+                    </span>
+
+                    {deleted ? (
+
+                      <span className="admin-status-badge deleted">
+
+                        <span className="admin-status-dot" />
+
+                        {t(
+                          "admin.deleted"
                         )}
-                  </span>
 
-                  <span
-                    className="capacity"
-                    style={{
-                      color:
-                        user.banned
-                          ? "#dc2626"
-                          : "#16a34a",
-                    }}
-                  >
-                    {user.banned
-                      ? t(
-                          "common.inactive"
-                        )
-                      : t(
+                      </span>
+
+                    ) : (
+
+                      <StatusBadge
+                        active={
+                          !user.banned
+                        }
+                        activeLabel={t(
                           "common.active"
                         )}
-                  </span>
-
-                </div>
-
-                <h3>
-                  {
-                    user.email
-                  }
-                </h3>
-
-                <div className="session-meta">
-
-                  <span>
-                    👤{" "}
-                    {t(
-                      "admin.role"
+                        inactiveLabel={t(
+                          "common.inactive"
+                        )}
+                      />
                     )}
-                    :{" "}
-                    {user.role ===
-                    "ADMIN"
-                      ? t(
+
+                  </div>
+
+                  <div className="admin-card-title">
+
+                    <div className="admin-card-icon">
+
+                      <UserRound
+                        size={19}
+                      />
+
+                    </div>
+
+                    <div>
+
+                      <h3>
+                        {deleted
+                          ? t(
+                              "admin.deletedAccount"
+                            )
+                          : user.email}
+                      </h3>
+
+                      <p>
+                        {deleted
+                          ? t(
+                              "admin.formerMember"
+                            )
+                          : isAdmin
+                          ? t(
+                              "admin.administrator"
+                            )
+                          : t(
+                              "common.member"
+                            )}
+                      </p>
+
+                    </div>
+
+                  </div>
+
+                  <div className="admin-meta">
+
+                    <MetaRow
+                      icon={
+                        CalendarDays
+                      }
+                      label={t(
+                        "admin.registration"
+                      )}
+                      value={formatDate(
+                        user.createdAt,
+                        locale,
+                        t
+                      )}
+                    />
+
+                    <MetaRow
+                      icon={
+                        CalendarClock
+                      }
+                      label={t(
+                        "admin.lastLogin"
+                      )}
+                      value={
+                        deleted
+                          ? "—"
+                          : user.lastLoginAt
+                          ? formatDate(
+                              user.lastLoginAt,
+                              locale,
+                              t
+                            )
+                          : t(
+                              "admin.never"
+                            )
+                      }
+                    />
+
+                  </div>
+
+                  <div className="admin-card-actions">
+
+                    {deleted ? (
+
+                      <button
+                        className="secondary-btn"
+                        disabled
+                      >
+                        {t(
+                          "admin.deletedAccountAction"
+                        )}
+                      </button>
+
+                    ) : isCurrentAdmin ? (
+
+                      <button
+                        className="secondary-btn"
+                        disabled
+                      >
+                        {t(
+                          "admin.yourAccount"
+                        )}
+                      </button>
+
+                    ) : isAdmin ? (
+
+                      <button
+                        className="secondary-btn"
+                        disabled
+                      >
+                        {t(
                           "admin.administrator"
-                        )
-                      : t(
-                          "common.member"
                         )}
-                  </span>
+                      </button>
 
-                  <span>
-                    📅{" "}
-                    {t(
-                      "admin.registration"
-                    )}
-                    :{" "}
-                    {formatDate(
-                      user.createdAt,
-                      locale,
-                      t
-                    )}
-                  </span>
+                    ) : user.banned ? (
 
-                  <span>
-                    🕒{" "}
-                    {t(
-                      "admin.lastLogin"
-                    )}
-                    :{" "}
-                    {user.lastLoginAt
-                      ? formatDate(
-                          user.lastLoginAt,
-                          locale,
-                          t
-                        )
-                      : t(
-                          "admin.never"
+                      <button
+                        className="admin-success-btn"
+                        onClick={() =>
+                          onUnban(
+                            user
+                          )
+                        }
+                      >
+                        {t(
+                          "admin.unban"
                         )}
-                  </span>
+                      </button>
 
-                </div>
+                    ) : (
 
-                {isCurrentAdmin ? (
-
-                  <button
-                    className="secondary-btn"
-                    disabled
-                  >
-                    {t(
-                      "admin.yourAccount"
+                      <button
+                        className="admin-danger-btn"
+                        onClick={() =>
+                          onBan(
+                            user
+                          )
+                        }
+                      >
+                        {t(
+                          "admin.ban"
+                        )}
+                      </button>
                     )}
-                  </button>
 
-                ) : isAdmin ? (
+                  </div>
 
-                  <button
-                    className="secondary-btn"
-                    disabled
-                  >
-                    {t(
-                      "admin.administrator"
-                    )}
-                  </button>
+                </article>
+              );
+            }
+          )}
 
-                ) : user.banned ? (
-
-                  <button
-                    className="primary-btn"
-                    onClick={() =>
-                      onUnban(
-                        user
-                      )
-                    }
-                  >
-                    {t(
-                      "admin.unban"
-                    )}
-                  </button>
-
-                ) : (
-
-                  <button
-                    className="secondary-btn"
-                    style={{
-                      background:
-                        "#fef2f2",
-
-                      color:
-                        "#dc2626",
-                    }}
-                    onClick={() =>
-                      onBan(
-                        user
-                      )
-                    }
-                  >
-                    {t(
-                      "admin.ban"
-                    )}
-                  </button>
-                )}
-
-              </article>
-            );
-          }
-        )}
-
-      </section>
+        </section>
+      )}
 
     </>
   );
@@ -1365,25 +1443,41 @@ function GymsSection({
     <>
 
       <form
-        className="create-session-form"
+        className="admin-form-card"
         onSubmit={
           onSave
         }
       >
 
-        <h3
-          style={{
-            margin: 0,
-          }}
-        >
-          {editingGymId
-            ? t(
-                "admin.editGym"
-              )
-            : t(
-                "admin.addGym"
+        <div className="admin-section-heading">
+
+          <div className="admin-section-icon">
+            <Warehouse
+              size={19}
+            />
+          </div>
+
+          <div>
+
+            <h3>
+              {editingGymId
+                ? t(
+                    "admin.editGym"
+                  )
+                : t(
+                    "admin.addGym"
+                  )}
+            </h3>
+
+            <p>
+              {t(
+                "admin.gyms"
               )}
-        </h3>
+            </p>
+
+          </div>
+
+        </div>
 
         <div className="form-grid">
 
@@ -1529,7 +1623,7 @@ function GymsSection({
 
         </div>
 
-        <div className="card-actions">
+        <div className="admin-form-actions">
 
           <button
             className="primary-btn"
@@ -1563,134 +1657,155 @@ function GymsSection({
 
       </form>
 
-      <section className="gyms-grid">
+      {gyms.length === 0 ? (
 
-        {gyms.map(
-          (gym) => (
+        <AdminEmptyState
+          icon={Warehouse}
+          title={t(
+            "admin.gyms"
+          )}
+        />
 
-            <article
-              className="gym-card"
-              key={
-                gym.id
-              }
-            >
+      ) : (
 
-              <div className="gym-icon">
-                📍
-              </div>
+        <section className="admin-cards-grid">
 
-              <div>
+          {gyms.map(
+            (gym) => (
 
-                <h3>
-                  {
-                    gym.name
-                  }
-                </h3>
+              <article
+                className="admin-card"
+                key={
+                  gym.id
+                }
+              >
 
-                <p className="activity">
-                  {
-                    gym.type
-                  }
-                </p>
+                <div className="admin-card-header">
 
-                <p className="description">
+                  <div className="admin-card-icon">
+                    <MapPin
+                      size={19}
+                    />
+                  </div>
+
+                  <StatusBadge
+                    active={
+                      gym.active
+                    }
+                    activeLabel={t(
+                      "common.active"
+                    )}
+                    inactiveLabel={t(
+                      "common.inactive"
+                    )}
+                  />
+
+                </div>
+
+                <div className="admin-card-title admin-card-title-simple">
+
+                  <div>
+
+                    <h3>
+                      {
+                        gym.name
+                      }
+                    </h3>
+
+                    <p>
+                      {
+                        gym.type
+                      }
+                    </p>
+
+                  </div>
+
+                </div>
+
+                <p className="admin-card-description">
                   {
                     gym.address
                   }
                 </p>
 
-              </div>
+                <div className="admin-meta admin-meta-compact">
 
-              <div className="session-meta">
-
-                <span>
-                  {t(
-                    "admin.accountState"
-                  )}
-                  :{" "}
-                  {gym.active
-                    ? t(
-                        "common.active"
-                      )
-                    : t(
-                        "common.inactive"
-                      )}
-                </span>
-
-                <span>
-                  {t(
-                    "admin.latitude"
-                  )}
-                  :{" "}
-                  {gym.latitude ??
-                    t(
-                      "common.unknown"
+                  <MetaRow
+                    icon={
+                      Navigation
+                    }
+                    label={t(
+                      "admin.latitude"
                     )}
-                </span>
-
-                <span>
-                  {t(
-                    "admin.longitude"
-                  )}
-                  :{" "}
-                  {gym.longitude ??
-                    t(
-                      "common.unknown"
-                    )}
-                </span>
-
-              </div>
-
-              <div className="card-actions">
-
-                <button
-                  className="secondary-btn"
-                  onClick={() =>
-                    onEdit(
-                      gym
-                    )
-                  }
-                >
-                  {t(
-                    "admin.edit"
-                  )}
-                </button>
-
-                <button
-                  className="secondary-btn"
-                  style={{
-                    background:
-                      gym.active
-                        ? "#fef2f2"
-                        : "#f0fdf4",
-
-                    color:
-                      gym.active
-                        ? "#dc2626"
-                        : "#16a34a",
-                  }}
-                  onClick={() =>
-                    onToggle(
-                      gym
-                    )
-                  }
-                >
-                  {gym.active
-                    ? t(
-                        "admin.disable"
+                    value={
+                      gym.latitude ??
+                      t(
+                        "common.unknown"
                       )
-                    : t(
-                        "admin.enable"
-                      )}
-                </button>
+                    }
+                  />
 
-              </div>
+                  <MetaRow
+                    icon={
+                      Navigation
+                    }
+                    label={t(
+                      "admin.longitude"
+                    )}
+                    value={
+                      gym.longitude ??
+                      t(
+                        "common.unknown"
+                      )
+                    }
+                  />
 
-            </article>
-          )
-        )}
+                </div>
 
-      </section>
+                <div className="admin-card-actions admin-card-actions-split">
+
+                  <button
+                    className="secondary-btn"
+                    onClick={() =>
+                      onEdit(
+                        gym
+                      )
+                    }
+                  >
+                    {t(
+                      "admin.edit"
+                    )}
+                  </button>
+
+                  <button
+                    className={
+                      gym.active
+                        ? "admin-danger-btn"
+                        : "admin-success-btn"
+                    }
+                    onClick={() =>
+                      onToggle(
+                        gym
+                      )
+                    }
+                  >
+                    {gym.active
+                      ? t(
+                          "admin.disable"
+                        )
+                      : t(
+                          "admin.enable"
+                        )}
+                  </button>
+
+                </div>
+
+              </article>
+            )
+          )}
+
+        </section>
+      )}
 
     </>
   );
@@ -1712,9 +1827,9 @@ function SessionsSection({
   return (
     <>
 
-      <section className="create-session-form">
+      <section className="admin-filter-panel">
 
-        <div className="form-grid">
+        <div className="admin-filter-grid">
 
           <div className="form-row">
 
@@ -1734,8 +1849,7 @@ function SessionsSection({
               }
               onChange={(event) =>
                 setSessionSearch(
-                  event.target
-                    .value
+                  event.target.value
                 )
               }
             />
@@ -1756,8 +1870,7 @@ function SessionsSection({
               }
               onChange={(event) =>
                 setSessionStatus(
-                  event.target
-                    .value
+                  event.target.value
                 )
               }
             >
@@ -1794,139 +1907,249 @@ function SessionsSection({
 
       </section>
 
-      <section className="sessions-grid">
+      {sessions.length === 0 ? (
 
-        {sessions.map(
-          (session) => (
+        <AdminEmptyState
+          icon={Dumbbell}
+          title={t(
+            "admin.sessions"
+          )}
+        />
 
-            <article
-              className="session-card"
-              key={
-                session.id
-              }
-            >
+      ) : (
 
-              <div className="session-card-header">
+        <section className="admin-cards-grid">
 
-                <span className="badge">
-                  {t(
-                    `status.${session.status}`
-                  )}
-                </span>
+          {sessions.map(
+            (session) => (
 
-                <span className="capacity">
-                  {
-                    session.participantCount
-                  }{" "}
-                  /{" "}
-                  {
-                    session.capacity
-                  }
-                </span>
-
-              </div>
-
-              <h3>
-                {
-                  session.title
+              <article
+                className="admin-card"
+                key={
+                  session.id
                 }
-              </h3>
+              >
 
-              <p className="activity">
-                {activityLabel(
-                  session.activityType,
-                  t
-                )}
-              </p>
+                <div className="admin-card-header">
 
-              <div className="session-meta">
+                  <span className="badge">
+                    {t(
+                      `status.${session.status}`
+                    )}
+                  </span>
 
-                <span>
-                  📍{" "}
-                  {
-                    session.gymName
-                  }
-                </span>
+                  <span className="admin-participant-count">
 
-                <span>
-                  🕒{" "}
-                  {formatDate(
-                    session.startAt,
-                    locale,
-                    t
-                  )}
-                </span>
+                    <UsersRound
+                      size={14}
+                    />
 
-                <span>
-                  ⏱️{" "}
-                  {
-                    session.durationMin
-                  }{" "}
-                  {t(
-                    "common.minutes"
-                  )}
-                </span>
-
-                <span>
-                  👤{" "}
-                  {t(
-                    "admin.creator"
-                  )}
-                  :{" "}
-                  {
-                    session.creatorEmail
-                  }
-                </span>
-
-              </div>
-
-              {session.status ===
-              "UPCOMING" ? (
-
-                <button
-                  className="secondary-btn"
-                  style={{
-                    background:
-                      "#fef2f2",
-
-                    color:
-                      "#dc2626",
-                  }}
-                  onClick={() =>
-                    onCancel(
+                    {
                       session
-                    )
-                  }
-                >
-                  {t(
-                    "admin.removeSession"
-                  )}
-                </button>
+                        .participantCount
+                    }
+                    {" / "}
+                    {
+                      session.capacity
+                    }
 
-              ) : (
+                  </span>
 
-                <button
-                  className="secondary-btn"
-                  disabled
-                >
-                  {session.status ===
-                  "COMPLETED"
-                    ? t(
-                        "profile.completed"
-                      )
-                    : t(
-                        "profile.cancelled"
+                </div>
+
+                <div className="admin-card-title">
+
+                  <div className="admin-card-icon">
+                    <Dumbbell
+                      size={19}
+                    />
+                  </div>
+
+                  <div>
+
+                    <h3>
+                      {
+                        session.title
+                      }
+                    </h3>
+
+                    <p>
+                      {activityLabel(
+                        session.activityType,
+                        t
                       )}
-                </button>
-              )}
+                    </p>
 
-            </article>
-          )
-        )}
+                  </div>
 
-      </section>
+                </div>
+
+                <div className="admin-meta">
+
+                  <MetaRow
+                    icon={
+                      MapPin
+                    }
+                    label={t(
+                      "sessions.gym"
+                    )}
+                    value={
+                      session.gymName
+                    }
+                  />
+
+                  <MetaRow
+                    icon={
+                      CalendarClock
+                    }
+                    label={t(
+                      "sessions.date"
+                    )}
+                    value={formatDate(
+                      session.startAt,
+                      locale,
+                      t
+                    )}
+                  />
+
+                  <MetaRow
+                    icon={
+                      UserRound
+                    }
+                    label={t(
+                      "admin.creator"
+                    )}
+                    value={
+                      isDeletedAccount(
+                        session
+                          .creatorEmail
+                      )
+                        ? t(
+                            "admin.deletedAccount"
+                          )
+                        : session
+                            .creatorEmail
+                    }
+                  />
+
+                </div>
+
+                <div className="admin-card-actions">
+
+                  {session.status ===
+                  "UPCOMING" ? (
+
+                    <button
+                      className="admin-danger-btn"
+                      onClick={() =>
+                        onCancel(
+                          session
+                        )
+                      }
+                    >
+                      {t(
+                        "admin.removeSession"
+                      )}
+                    </button>
+
+                  ) : (
+
+                    <button
+                      className="secondary-btn"
+                      disabled
+                    >
+                      {session.status ===
+                      "COMPLETED"
+                        ? t(
+                            "profile.completed"
+                          )
+                        : t(
+                            "profile.cancelled"
+                          )}
+                    </button>
+                  )}
+
+                </div>
+
+              </article>
+            )
+          )}
+
+        </section>
+      )}
 
     </>
+  );
+}
+
+function MetaRow({
+  icon: Icon,
+  label,
+  value,
+}) {
+  return (
+    <div className="admin-meta-row">
+
+      <Icon
+        size={15}
+      />
+
+      <div>
+
+        <span>
+          {label}
+        </span>
+
+        <strong>
+          {value}
+        </strong>
+
+      </div>
+
+    </div>
+  );
+}
+
+function StatusBadge({
+  active,
+  activeLabel,
+  inactiveLabel,
+}) {
+  return (
+    <span
+      className={
+        active
+          ? "admin-status-badge"
+          : "admin-status-badge inactive"
+      }
+    >
+
+      <span className="admin-status-dot" />
+
+      {active
+        ? activeLabel
+        : inactiveLabel}
+
+    </span>
+  );
+}
+
+function AdminEmptyState({
+  icon: Icon,
+  title,
+}) {
+  return (
+    <section className="admin-empty-state">
+
+      <Icon
+        size={24}
+      />
+
+      <h3>
+        {title}
+      </h3>
+
+    </section>
   );
 }
 

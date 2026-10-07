@@ -1,4 +1,10 @@
 import {
+  AlertTriangle,
+  Send,
+  X,
+} from "lucide-react";
+
+import {
   useState,
 } from "react";
 
@@ -7,6 +13,8 @@ import api
 
 import { useLanguage }
   from "../i18n/LanguageContext";
+
+import "../styles/admin.css";
 
 const REASONS = [
   "SPAM",
@@ -26,23 +34,18 @@ export default function ReportPanel({
     return null;
   }
 
-  /*
-   * Le formulaire reçoit une key basée sur
-   * la cible.
-   *
-   * Lorsqu'un autre signalement est ouvert,
-   * React recrée automatiquement le formulaire
-   * avec un état propre.
-   *
-   * On évite ainsi de devoir réinitialiser le
-   * state dans un useEffect.
-   */
   return (
     <ReportForm
       key={`${target.type}-${target.id}`}
-      target={target}
-      onCancel={onCancel}
-      onSuccess={onSuccess}
+      target={
+        target
+      }
+      onCancel={
+        onCancel
+      }
+      onSuccess={
+        onSuccess
+      }
     />
   );
 }
@@ -81,7 +84,9 @@ function ReportForm({
     async (event) => {
       event.preventDefault();
 
-      setSubmitting(true);
+      setSubmitting(
+        true
+      );
 
       setError("");
 
@@ -124,51 +129,54 @@ function ReportForm({
     };
 
   return (
-    <section
-      className="create-session-form"
-      style={{
-        marginBottom:
-          "28px",
-      }}
-    >
+    <section className="report-panel">
 
-      <div>
+      <div className="report-panel-heading">
 
-        <p className="eyebrow">
-          {t(
-            "report.title"
-          )}
-        </p>
+        <div className="report-panel-icon">
 
-        <h3
-          style={{
-            marginTop: 0,
-          }}
-        >
-          {t(
-            "report.report",
-            {
-              target:
-                target.label,
-            }
-          )}
-        </h3>
+          <AlertTriangle
+            size={20}
+          />
 
-        <p className="description">
-          {t(
-            "report.description"
-          )}
-        </p>
+        </div>
+
+        <div>
+
+          <p className="eyebrow">
+            {t(
+              "report.title"
+            )}
+          </p>
+
+          <h3>
+            {t(
+              "report.report",
+              {
+                target:
+                  target.label,
+              }
+            )}
+          </h3>
+
+          <p>
+            {t(
+              "report.description"
+            )}
+          </p>
+
+        </div>
 
       </div>
 
       {error && (
-        <div className="page-message">
+        <div className="alert error">
           {error}
         </div>
       )}
 
       <form
+        className="report-form"
         onSubmit={
           submitReport
         }
@@ -183,7 +191,9 @@ function ReportForm({
           </label>
 
           <select
-            value={reason}
+            value={
+              reason
+            }
             onChange={(event) =>
               setReason(
                 event.target.value
@@ -193,9 +203,14 @@ function ReportForm({
 
             {REASONS.map(
               (value) => (
+
                 <option
-                  key={value}
-                  value={value}
+                  key={
+                    value
+                  }
+                  value={
+                    value
+                  }
                 >
                   {t(
                     `reason.${value}`
@@ -221,7 +236,9 @@ function ReportForm({
             placeholder={t(
               "report.detailsPlaceholder"
             )}
-            value={details}
+            value={
+              details
+            }
             onChange={(event) =>
               setDetails(
                 event.target.value
@@ -231,15 +248,20 @@ function ReportForm({
 
         </div>
 
-        <div className="card-actions">
+        <div className="report-form-actions">
 
           <button
-            className="primary-btn"
+            className="admin-danger-btn"
             type="submit"
             disabled={
               submitting
             }
           >
+
+            <Send
+              size={16}
+            />
+
             {submitting
               ? t(
                   "report.sending"
@@ -247,6 +269,7 @@ function ReportForm({
               : t(
                   "report.send"
                 )}
+
           </button>
 
           <button
@@ -259,9 +282,15 @@ function ReportForm({
               submitting
             }
           >
+
+            <X
+              size={16}
+            />
+
             {t(
               "common.cancel"
             )}
+
           </button>
 
         </div>

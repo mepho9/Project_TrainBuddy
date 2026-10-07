@@ -1,0 +1,1131 @@
+/*
+ * ==========================================
+ * TRAINBUDDY — ADMIN & MODERATION POLISH
+ * ==========================================
+ */
+
+.admin-page {
+  padding-top: 42px;
+}
+
+.admin-hero {
+  margin-bottom: 24px;
+}
+
+.admin-tabs {
+  width: fit-content;
+  max-width: 100%;
+  margin: 0 auto 28px;
+}
+
+.admin-tabs button {
+  gap: 7px;
+}
+
+.admin-tab-count {
+  min-width: 22px;
+  height: 20px;
+
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  padding: 0 6px;
+
+  border-radius: 999px;
+
+  background: #f1f4f8;
+  color: #6e7a8c;
+
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.admin-tabs button.active
+.admin-tab-count {
+  background: #dfe9ff;
+  color: var(--tb-primary);
+}
+
+
+/*
+ * FILTERS & FORMS
+ */
+
+.admin-filter-panel,
+.admin-form-card {
+  margin-bottom: 24px;
+  padding: 22px;
+
+  border: 1px solid var(--tb-border);
+  border-radius: var(--tb-radius-md);
+
+  background: var(--tb-surface);
+
+  box-shadow: var(--tb-shadow-sm);
+}
+
+.admin-filter-grid {
+  display: grid;
+
+  grid-template-columns:
+    minmax(0, 2fr)
+    minmax(180px, 0.7fr);
+
+  gap: 14px;
+}
+
+.admin-form-card {
+  display: grid;
+  gap: 18px;
+}
+
+.admin-section-heading {
+  display: flex;
+  align-items: center;
+
+  gap: 12px;
+
+  padding-bottom: 16px;
+
+  border-bottom:
+    1px solid
+    var(--tb-border);
+}
+
+.admin-section-icon,
+.admin-card-icon,
+.report-panel-icon {
+  width: 40px;
+  height: 40px;
+
+  display: grid;
+  place-items: center;
+
+  flex: 0 0 auto;
+
+  border:
+    1px solid
+    var(--tb-primary-border);
+
+  border-radius: 11px;
+
+  background:
+    var(--tb-primary-soft);
+
+  color:
+    var(--tb-primary);
+}
+
+.admin-section-heading h3 {
+  margin: 0;
+
+  color:
+    var(--tb-text);
+
+  font-size: 18px;
+
+  letter-spacing:
+    -0.25px;
+}
+
+.admin-section-heading p {
+  margin: 4px 0 0;
+
+  color:
+    var(--tb-text-soft);
+
+  font-size: 12px;
+}
+
+.admin-form-actions,
+.report-form-actions {
+  display: flex;
+  align-items: center;
+
+  gap: 10px;
+
+  margin-top: 4px;
+}
+
+.admin-form-actions
+.primary-btn,
+.admin-form-actions
+.secondary-btn,
+.report-form-actions
+.secondary-btn,
+.report-form-actions
+.admin-danger-btn {
+  width: auto;
+  min-width: 150px;
+}
+
+.admin-input-with-icon {
+  min-height: 43px;
+
+  display: flex;
+  align-items: center;
+
+  gap: 9px;
+
+  padding: 0 12px;
+
+  border:
+    1px solid
+    var(--tb-border-strong);
+
+  border-radius: 11px;
+
+  background:
+    var(--tb-surface);
+
+  color: #8a96a8;
+
+  transition:
+    border-color 150ms ease,
+    box-shadow 150ms ease;
+}
+
+.admin-input-with-icon:focus-within {
+  border-color: #8caaf3;
+
+  box-shadow:
+    0 0 0 3px
+    rgba(
+      36,
+      87,
+      214,
+      0.1
+    );
+}
+
+.admin-input-with-icon input {
+  min-width: 0;
+  min-height: 40px;
+
+  flex: 1;
+
+  padding: 0;
+
+  border: 0;
+  outline: 0;
+
+  background: transparent;
+
+  color:
+    var(--tb-text);
+}
+
+
+/*
+ * CARDS
+ */
+
+.admin-cards-grid {
+  display: grid;
+
+  grid-template-columns:
+    repeat(
+      3,
+      minmax(
+        0,
+        1fr
+      )
+    );
+
+  gap: 18px;
+}
+
+.admin-card {
+  min-width: 0;
+
+  display: flex;
+  flex-direction: column;
+
+  padding: 20px;
+
+  border:
+    1px solid
+    var(--tb-border);
+
+  border-radius:
+    var(--tb-radius-md);
+
+  background:
+    var(--tb-surface);
+
+  box-shadow:
+    var(--tb-shadow-sm);
+
+  transition:
+    transform 160ms ease,
+    border-color 160ms ease,
+    box-shadow 160ms ease;
+}
+
+.admin-card:hover {
+  transform:
+    translateY(-2px);
+
+  border-color: #d6deea;
+
+  box-shadow:
+    var(--tb-shadow-md);
+}
+
+
+/*
+ * Deleted accounts are intentionally
+ * visually quieter than active accounts.
+ */
+
+.admin-card.deleted-account {
+  border-color: #e2e5ea;
+
+  background:
+    linear-gradient(
+      180deg,
+      #ffffff 0%,
+      #fafbfc 100%
+    );
+}
+
+.admin-card.deleted-account:hover {
+  transform: none;
+
+  border-color: #e2e5ea;
+
+  box-shadow:
+    var(--tb-shadow-sm);
+}
+
+.admin-card.deleted-account
+.admin-card-icon {
+  border-color: #e1e5ea;
+
+  background: #f5f6f8;
+
+  color: #8791a0;
+}
+
+.admin-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  gap: 12px;
+
+  margin-bottom: 18px;
+}
+
+.admin-role-badge,
+.admin-target-badge,
+.admin-participant-count,
+.admin-status-badge,
+.admin-report-status {
+  min-height: 25px;
+
+  display: inline-flex;
+  align-items: center;
+
+  gap: 6px;
+
+  border-radius: 999px;
+
+  font-size: 10px;
+  font-weight: 800;
+
+  letter-spacing:
+    0.035em;
+}
+
+.admin-role-badge {
+  padding: 0 9px;
+
+  border:
+    1px solid
+    var(--tb-primary-border);
+
+  background:
+    var(--tb-primary-soft);
+
+  color:
+    var(--tb-primary);
+}
+
+.admin-status-badge {
+  padding: 0 9px;
+
+  border:
+    1px solid
+    #cfe7da;
+
+  background:
+    var(--tb-success-soft);
+
+  color:
+    var(--tb-success);
+}
+
+.admin-status-badge.inactive {
+  border-color: #e0e4ea;
+
+  background: #f6f7f9;
+
+  color: #778397;
+}
+
+.admin-status-badge.deleted {
+  border-color: #dfe3e8;
+
+  background: #f4f5f7;
+
+  color: #697586;
+}
+
+.admin-status-dot {
+  width: 6px;
+  height: 6px;
+
+  border-radius: 50%;
+
+  background:
+    currentColor;
+}
+
+.admin-participant-count {
+  padding: 0 3px;
+
+  color: #788498;
+}
+
+.admin-card-title {
+  display: flex;
+  align-items: center;
+
+  gap: 12px;
+
+  margin-bottom: 18px;
+}
+
+.admin-card-title-simple {
+  margin-bottom: 8px;
+}
+
+.admin-card-title h3,
+.admin-report-title h3 {
+  overflow-wrap:
+    anywhere;
+
+  margin: 0;
+
+  color:
+    var(--tb-text);
+
+  font-size: 16px;
+  line-height: 1.35;
+
+  letter-spacing:
+    -0.2px;
+}
+
+.admin-card-title p,
+.admin-report-title p {
+  margin: 4px 0 0;
+
+  color:
+    var(--tb-text-soft);
+
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.deleted-account
+.admin-card-title h3 {
+  color: #596578;
+}
+
+.deleted-account
+.admin-card-title p {
+  color: #8a94a3;
+}
+
+.admin-card-description {
+  min-height: 42px;
+
+  margin: 0 0 16px;
+
+  color:
+    var(--tb-text-soft);
+
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.admin-meta {
+  display: grid;
+
+  gap: 9px;
+
+  margin-top: auto;
+  margin-bottom: 20px;
+}
+
+.admin-meta-compact {
+  margin-top: 8px;
+}
+
+.admin-meta-row {
+  min-width: 0;
+
+  display: grid;
+
+  grid-template-columns:
+    18px
+    minmax(
+      0,
+      1fr
+    );
+
+  gap: 9px;
+
+  align-items: start;
+}
+
+.admin-meta-row
+> svg {
+  margin-top: 2px;
+
+  color: #8995a8;
+
+  stroke-width: 1.8;
+}
+
+.admin-meta-row
+> div {
+  min-width: 0;
+
+  display: grid;
+
+  gap: 2px;
+}
+
+.admin-meta-row span {
+  color: #8a96a8;
+
+  font-size: 10px;
+  font-weight: 750;
+
+  letter-spacing:
+    0.04em;
+
+  text-transform:
+    uppercase;
+}
+
+.admin-meta-row strong {
+  overflow-wrap:
+    anywhere;
+
+  color: #526077;
+
+  font-size: 12px;
+  font-weight: 620;
+
+  line-height: 1.45;
+}
+
+.admin-card-actions {
+  display: flex;
+  align-items: stretch;
+
+  gap: 9px;
+
+  margin-top: auto;
+  padding-top: 2px;
+}
+
+.admin-card-actions
+> * {
+  flex: 1;
+}
+
+.admin-card-actions-split {
+  display: grid;
+
+  grid-template-columns:
+    repeat(
+      2,
+      minmax(
+        0,
+        1fr
+      )
+    );
+}
+
+
+/*
+ * ACTION BUTTONS
+ */
+
+.admin-danger-btn,
+.admin-success-btn {
+  min-height: 42px;
+
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  gap: 7px;
+
+  padding: 9px 14px;
+
+  border-radius: 11px;
+
+  font-size: 13px;
+  font-weight: 720;
+
+  cursor: pointer;
+
+  transition:
+    background-color 150ms ease,
+    border-color 150ms ease,
+    color 150ms ease,
+    transform 150ms ease;
+}
+
+.admin-danger-btn {
+  border:
+    1px solid
+    var(--tb-danger-border);
+
+  background:
+    var(--tb-danger-soft);
+
+  color:
+    var(--tb-danger);
+}
+
+.admin-danger-btn:hover:not(:disabled) {
+  transform:
+    translateY(-1px);
+
+  border-color:
+    #e4adb4;
+
+  background:
+    #ffebed;
+
+  color:
+    var(--tb-danger-dark);
+}
+
+.admin-success-btn {
+  border:
+    1px solid
+    #c8e4d6;
+
+  background:
+    var(--tb-success-soft);
+
+  color:
+    var(--tb-success);
+}
+
+.admin-success-btn:hover:not(:disabled) {
+  transform:
+    translateY(-1px);
+
+  border-color:
+    #acd6c1;
+
+  background:
+    #e5f6ed;
+}
+
+.admin-danger-btn:disabled,
+.admin-success-btn:disabled {
+  cursor:
+    not-allowed;
+
+  opacity: 0.55;
+}
+
+
+/*
+ * EMPTY STATE
+ */
+
+.admin-empty-state {
+  min-height: 210px;
+
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+
+  padding: 32px;
+
+  border:
+    1px solid
+    var(--tb-border);
+
+  border-radius:
+    var(--tb-radius-md);
+
+  background:
+    var(--tb-surface);
+
+  color: #8793a5;
+
+  text-align: center;
+
+  box-shadow:
+    var(--tb-shadow-sm);
+}
+
+.admin-empty-state
+> svg {
+  margin-bottom: 12px;
+
+  color:
+    var(--tb-primary);
+}
+
+.admin-empty-state h3 {
+  margin:
+    0 0 7px;
+
+  color:
+    var(--tb-text);
+
+  font-size: 17px;
+}
+
+.admin-empty-state p {
+  margin: 0;
+
+  color:
+    var(--tb-text-soft);
+
+  font-size: 13px;
+}
+
+
+/*
+ * REPORTS
+ */
+
+.admin-list-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  margin:
+    2px 0 18px;
+}
+
+.admin-list-heading
+.eyebrow {
+  margin-bottom: 4px;
+}
+
+.admin-list-heading strong {
+  color:
+    var(--tb-text);
+
+  font-size: 14px;
+}
+
+.admin-reports-grid {
+  grid-template-columns:
+    repeat(
+      2,
+      minmax(
+        0,
+        1fr
+      )
+    );
+}
+
+.admin-report-card {
+  min-height: 100%;
+}
+
+.admin-report-status {
+  padding: 0 9px;
+
+  border:
+    1px solid
+    var(--tb-border);
+
+  background: #f7f9fc;
+
+  color: #657187;
+}
+
+.admin-report-status.status-open {
+  border-color: #f0d9ac;
+
+  background: #fff9ed;
+
+  color: #9a6a13;
+}
+
+.admin-report-status.status-reviewed {
+  border-color:
+    var(--tb-primary-border);
+
+  background:
+    var(--tb-primary-soft);
+
+  color:
+    var(--tb-primary);
+}
+
+.admin-report-status.status-closed {
+  border-color: #cfe7da;
+
+  background:
+    var(--tb-success-soft);
+
+  color:
+    var(--tb-success);
+}
+
+.admin-target-badge {
+  padding: 0 8px;
+
+  border:
+    1px solid
+    var(--tb-border);
+
+  background: #f8fafc;
+
+  color: #748096;
+}
+
+.admin-report-title {
+  display: flex;
+  align-items: flex-start;
+
+  gap: 12px;
+
+  margin-bottom: 18px;
+}
+
+.admin-report-title
+.report-icon {
+  width: 38px;
+  height: 38px;
+
+  color: #a66a20;
+
+  border-color: #f1dfbd;
+
+  background: #fff9ef;
+}
+
+.admin-report-title p {
+  max-width: 620px;
+
+  margin-top: 6px;
+
+  line-height: 1.6;
+}
+
+.admin-history {
+  margin:
+    2px 0 20px;
+
+  padding: 14px;
+
+  border:
+    1px solid
+    var(--tb-border);
+
+  border-radius: 12px;
+
+  background:
+    var(--tb-surface-soft);
+}
+
+.admin-history-title {
+  display: flex;
+  align-items: center;
+
+  gap: 7px;
+
+  color: #586579;
+}
+
+.admin-history-title strong {
+  font-size: 12px;
+}
+
+.admin-history-list {
+  display: grid;
+
+  gap: 8px;
+
+  margin-top: 10px;
+}
+
+.admin-history-item {
+  display: grid;
+
+  grid-template-columns:
+    minmax(
+      120px,
+      0.8fr
+    )
+    minmax(
+      0,
+      1.2fr
+    )
+    auto;
+
+  gap: 10px;
+
+  align-items: center;
+
+  padding-top: 8px;
+
+  border-top:
+    1px solid
+    #e8edf3;
+
+  color: #6b778a;
+
+  font-size: 11px;
+}
+
+.admin-history-item strong {
+  color: #455268;
+
+  font-size: 11px;
+}
+
+.admin-history-item span {
+  overflow-wrap:
+    anywhere;
+}
+
+.admin-history-item time {
+  color: #8a96a8;
+
+  white-space: nowrap;
+}
+
+
+/*
+ * REPORT PANEL MEMBER
+ */
+
+.report-panel {
+  margin-bottom: 28px;
+
+  padding: 24px;
+
+  border:
+    1px solid
+    #efd8da;
+
+  border-radius:
+    var(--tb-radius-md);
+
+  background:
+    linear-gradient(
+      180deg,
+      #ffffff 0%,
+      #fffbfb 100%
+    );
+
+  box-shadow:
+    var(--tb-shadow-sm);
+}
+
+.report-panel-heading {
+  display: flex;
+  align-items: flex-start;
+
+  gap: 13px;
+
+  margin-bottom: 22px;
+}
+
+.report-panel-heading
+.report-panel-icon {
+  color: #a85a61;
+
+  border-color: #f0d2d5;
+
+  background: #fff5f5;
+}
+
+.report-panel-heading
+.eyebrow {
+  margin-bottom: 6px;
+
+  color:
+    var(--tb-danger);
+}
+
+.report-panel-heading h3 {
+  margin: 0;
+
+  color:
+    var(--tb-text);
+
+  font-size: 18px;
+
+  letter-spacing:
+    -0.25px;
+}
+
+.report-panel-heading
+p:not(.eyebrow) {
+  max-width: 720px;
+
+  margin: 7px 0 0;
+
+  color:
+    var(--tb-text-soft);
+
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.report-form {
+  display: grid;
+
+  gap: 16px;
+}
+
+.report-form textarea {
+  min-height: 120px;
+}
+
+.report-form-actions {
+  margin-top: 4px;
+}
+
+
+/*
+ * RESPONSIVE
+ */
+
+@media (
+  max-width: 1060px
+) {
+
+  .admin-cards-grid {
+    grid-template-columns:
+      repeat(
+        2,
+        minmax(
+          0,
+          1fr
+        )
+      );
+  }
+
+  .admin-reports-grid {
+    grid-template-columns:
+      1fr;
+  }
+
+}
+
+@media (
+  max-width: 760px
+) {
+
+  .admin-page {
+    padding-top: 26px;
+  }
+
+  .admin-tabs {
+    width: 100%;
+
+    overflow-x: auto;
+
+    justify-content:
+      flex-start;
+
+    scrollbar-width: none;
+  }
+
+  .admin-tabs::-webkit-scrollbar {
+    display: none;
+  }
+
+  .admin-filter-grid {
+    grid-template-columns:
+      1fr;
+  }
+
+  .admin-cards-grid {
+    grid-template-columns:
+      1fr;
+  }
+
+  .admin-form-actions,
+  .report-form-actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .admin-form-actions
+  .primary-btn,
+  .admin-form-actions
+  .secondary-btn,
+  .report-form-actions
+  .secondary-btn,
+  .report-form-actions
+  .admin-danger-btn {
+    width: 100%;
+  }
+
+  .admin-history-item {
+    grid-template-columns:
+      1fr;
+
+    gap: 4px;
+  }
+
+  .admin-history-item time {
+    white-space: normal;
+  }
+
+}
+
+@media (
+  max-width: 520px
+) {
+
+  .admin-filter-panel,
+  .admin-form-card,
+  .admin-card,
+  .report-panel {
+    padding: 18px;
+  }
+
+  .admin-card-actions,
+  .admin-card-actions-split {
+    display: grid;
+
+    grid-template-columns:
+      1fr;
+  }
+
+  .report-panel-heading {
+    gap: 10px;
+  }
+
+  .report-panel-icon {
+    width: 36px;
+    height: 36px;
+  }
+
+}

@@ -9,9 +9,6 @@
  * ==========================================
  * AUTH
  * ==========================================
- *
- * Login et Register doivent avoir exactement
- * la même largeur.
  */
 
 .auth-shell {
@@ -201,6 +198,164 @@ h4
 
 /*
  * ==========================================
+ * SESSION CARDS
+ * ==========================================
+ */
+
+.premium-badge {
+  min-height: 25px;
+
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  padding:
+    0
+    9px;
+
+  border:
+    1px solid
+    #d7d9ff;
+
+  border-radius: 999px;
+
+  background:
+    #f3f2ff;
+
+  color:
+    #6258c7;
+
+  font-size: 10px;
+  font-weight: 800;
+
+  letter-spacing:
+    0.07em;
+
+  text-transform:
+    uppercase;
+}
+
+.session-meta {
+  gap: 9px;
+}
+
+.session-meta-item {
+  min-width: 0;
+
+  display: flex;
+  align-items: center;
+
+  gap: 8px;
+
+  color:
+    #647084;
+}
+
+.session-meta-item
+> svg {
+  flex:
+    0 0 auto;
+
+  color:
+    #8995a8;
+
+  stroke-width:
+    1.8;
+}
+
+.session-meta-item
+> span {
+  min-width: 0;
+
+  overflow: hidden;
+
+  text-overflow:
+    ellipsis;
+}
+
+.session-detail-info {
+  display: grid;
+
+  grid-template-columns:
+    repeat(
+      2,
+      minmax(
+        0,
+        1fr
+      )
+    );
+
+  gap: 12px;
+
+  margin-top: 24px;
+  margin-bottom: 26px;
+}
+
+.session-info-item {
+  min-height: 68px;
+
+  display: flex;
+  align-items: flex-start;
+
+  gap: 11px;
+
+  padding:
+    13px
+    14px;
+
+  border:
+    1px solid
+    var(--tb-border);
+
+  border-radius: 12px;
+
+  background:
+    var(--tb-surface-soft);
+
+  color:
+    #56647a;
+}
+
+.session-info-item
+> svg {
+  flex:
+    0 0 auto;
+
+  margin-top: 2px;
+
+  color:
+    var(--tb-primary);
+
+  stroke-width:
+    1.8;
+}
+
+.session-info-item
+> span {
+  min-width: 0;
+
+  display: grid;
+
+  gap: 3px;
+}
+
+.session-info-item strong {
+  color:
+    #7b8798;
+
+  font-size: 10px;
+  font-weight: 800;
+
+  letter-spacing:
+    0.06em;
+
+  text-transform:
+    uppercase;
+}
+
+
+/*
+ * ==========================================
  * FAVORITE GYMS
  * ==========================================
  */
@@ -229,6 +384,7 @@ h4
     sans-serif;
 
   font-size: 14px;
+
   line-height: 1;
 }
 
@@ -325,5 +481,10 @@ section.create-session-form
   + .session-card
   .primary-btn {
     width: 100%;
+  }
+
+  .session-detail-info {
+    grid-template-columns:
+      1fr;
   }
 }

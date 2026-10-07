@@ -21,17 +21,23 @@ const uiTranslations = {
     "language.label":
       "Choisir la langue",
 
-    /*
-     * Overrides visuels du bloc Premium.
-     *
-     * Le prix n'apparaît plus dans le bouton
-     * et le tiret long est supprimé.
-     */
     "subscription.offer":
       "Premium à 4,99 € / mois",
 
     "subscription.upgrade":
       "Passer à Premium",
+
+    "admin.deletedAccount":
+      "Compte supprimé",
+
+    "admin.formerMember":
+      "Ancien membre TrainBuddy",
+
+    "admin.deleted":
+      "Supprimé",
+
+    "admin.deletedAccountAction":
+      "Compte supprimé",
 
     "notFound.eyebrow":
       "Erreur 404",
@@ -74,6 +80,18 @@ const uiTranslations = {
     "subscription.upgrade":
       "Upgrade to Premium",
 
+    "admin.deletedAccount":
+      "Deleted account",
+
+    "admin.formerMember":
+      "Former TrainBuddy member",
+
+    "admin.deleted":
+      "Deleted",
+
+    "admin.deletedAccountAction":
+      "Account deleted",
+
     "notFound.eyebrow":
       "Error 404",
 
@@ -114,6 +132,18 @@ const uiTranslations = {
 
     "subscription.upgrade":
       "Overschakelen naar Premium",
+
+    "admin.deletedAccount":
+      "Verwijderd account",
+
+    "admin.formerMember":
+      "Voormalig TrainBuddy-lid",
+
+    "admin.deleted":
+      "Verwijderd",
+
+    "admin.deletedAccountAction":
+      "Account verwijderd",
 
     "notFound.eyebrow":
       "Fout 404",
